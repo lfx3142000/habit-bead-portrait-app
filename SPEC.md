@@ -1,1 +1,23 @@
-# Habit Beads Spec ## Product vision Habit Beads is a mobile habit-tracking app focused on fast, visual daily logging. The experience emphasizes low-friction input, glanceable history, and satisfying progress feedback. ## Product goals - Make habit logging fast enough to use multiple times per day. - Let users track more than simple done/not-done outcomes. - Keep the main tracking experience compact, visual, and easy to scan. - Support personalization of habits and overall appearance. - Preserve data reliably and make the app feel dependable. - Create a foundation for widgets and future expansion. ## Primary users - People tracking several recurring habits at once. - People who want a grid-style view instead of a diary-style view. - People who value quick updates and visible streak/progress patterns. - People who want flexible habit definitions and lightweight customization. ## Core product principles - Fast entry over deep navigation. - Visual clarity over decorative complexity. - Flexible tracking over rigid templates. - Persistent local reliability over unnecessary connected features. - Extensible architecture for future widgets and premium options. ## Main experience The app provides a central tracker view where habits and days intersect in interactive cells. Users can review recent history, log progress directly from the main view, and manage their habit list without excessive screen switching. ## Functional requirements ### Habit tracking - Users can log progress for each habit on each day. - Habit progress can represent repeated completion levels, not only binary completion. - The interface makes current state and recent patterns easy to understand. ### Habit management - Users can create, edit, organize, and remove habits. - Each habit has a user-visible identity, including naming and visual differentiation. - Habit organization should support long-term maintainability as the list changes. ### Persistence - User data is saved locally and restored reliably. - The app preserves both tracking data and user preferences. - The experience remains consistent across reopen, resume, and routine device changes. ### Settings and personalization - Users can adjust appearance and behavior settings. - The app supports theming and visual customization. - The product allows future expansion for advanced preferences and export-related options. ## Design intent - The interface should feel compact, tactile, and satisfying. - Visual feedback should reinforce progress clearly. - Layout and interaction should prioritize readability, tap comfort, and speed. - The product should feel polished enough for everyday repeated use. ## Extension intent - The product should be designed to support home-screen widgets. - The product should allow future expansion into premium or advanced features. - Extensions should build on the core tracker rather than replace it. ## MVP definition The MVP is successful when users can define habits, log progress quickly, trust the app to preserve data, and use the tracker comfortably as a daily tool.
+# Habit Beads MVP Spec
+
+Habit Beads is a landscape Android habit tracker where users log habit progress as small bead counts in a compact 14-day grid.
+
+## MVP decisions
+
+- Android first
+- Kotlin
+- Jetpack Compose
+- Material 3
+- Landscape orientation
+- Local-first storage
+- Room for habits and entries
+- DataStore for preferences
+- Tap cell to increment
+- Long-press cell to decrement
+- Count range 0–9
+- Last 14 days including today
+- No login, backend, cloud sync, or analytics in MVP
+
+## Current implementation checkpoint
+
+The repository currently contains a lean Compose foundation used to validate GitHub Actions before layering in the full app.
