@@ -18,9 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -44,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -263,7 +261,7 @@ private fun TrackerTopBar(onOptions: () -> Unit, onAddHabit: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onOptions, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Default.Refresh, contentDescription = "Options")
+                Icon(painterResource(R.drawable.ic_refresh_24), contentDescription = "Options")
             }
             Surface(
                 onClick = onAddHabit,
@@ -273,7 +271,7 @@ private fun TrackerTopBar(onOptions: () -> Unit, onAddHabit: () -> Unit) {
                 shadowElevation = 3.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Add, contentDescription = "Add habit", tint = Color.White)
+                    Icon(painterResource(R.drawable.ic_add_24), contentDescription = "Add habit", tint = Color.White)
                 }
             }
         }
