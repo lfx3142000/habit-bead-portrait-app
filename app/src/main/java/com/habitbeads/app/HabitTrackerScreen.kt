@@ -5,12 +5,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -106,52 +108,64 @@ fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThe
         }
     }
 
-    Column(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(PortraitBackground)
-            .statusBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, top = 72.dp, bottom = 18.dp)
     ) {
-        TrackerTopBar(
-            onOptions = { showOptionsDialog = true },
-            onAddHabit = { showAddDialog = true }
-        )
+        val isLandscape = maxWidth > maxHeight
+        val horizontalPadding = if (isLandscape) 24.dp else 16.dp
+        val topPadding = if (isLandscape) 18.dp else 72.dp
+        val contentMaxWidth = if (isLandscape) 760.dp else maxWidth
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .widthIn(max = contentMaxWidth)
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(start = horizontalPadding, end = horizontalPadding, top = topPadding, bottom = 18.dp)
+        ) {
+            TrackerTopBar(
+                onOptions = { showOptionsDialog = true },
+                onAddHabit = { showAddDialog = true }
+            )
 
-        when {
-            !isLoaded -> LoadingHabitState()
-            habits.isEmpty() -> EmptyHabitState(onAddHabit = { showAddDialog = true })
-            else -> PortraitTrackerCard(
-                habits = habits,
-                days = days,
-                counts = counts,
-                horizontalScrollState = horizontalScrollState,
-                onEditHabit = { habitToEdit = it },
-                onMoveHabit = ::moveHabit,
-                onIncrement = { habit, day, count ->
-                    val key = "${habit.id}:${day.dateKey}"
-                    val next = (count + 1).coerceAtMost(9)
-                    counts[key] = next
-                    scope.launch { repository.saveCount(habit.id, day.dateKey, next) }
-                },
-                onDecrement = { habit, day, count ->
-                    val key = "${habit.id}:${day.dateKey}"
-                    val next = (count - 1).coerceAtLeast(0)
-                    if (next == 0) counts.remove(key) else counts[key] = next
-                    scope.launch { repository.saveCount(habit.id, day.dateKey, next) }
-                }
+            Spacer(modifier = Modifier.height(if (isLandscape) 12.dp else 18.dp))
+
+            when {
+                !isLoaded -> LoadingHabitState()
+                habits.isEmpty() -> EmptyHabitState(onAddHabit = { showAddDialog = true })
+                else -> PortraitTrackerCard(
+                    habits = habits,
+                    days = days,
+                    counts = counts,
+                    horizontalScrollState = horizontalScrollState,
+                    onEditHabit = { habitToEdit = it },
+                    onMoveHabit = ::moveHabit,
+                    onIncrement = { habit, day, count ->
+                        val key = "${habit.id}:${day.dateKey}"
+                        val next = (count + 1).coerceAtMost(9)
+                        counts[key] = next
+                        scope.launch { repository.saveCount(habit.id, day.dateKey, next) }
+                    },
+                    onDecrement = { habit, day, count ->
+                        val key = "${habit.id}:${day.dateKey}"
+                        val next = (count - 1).coerceAtLeast(0)
+                        if (next == 0) counts.remove(key) else counts[key] = next
+                        scope.launch { repository.saveCount(habit.id, day.dateKey, next) }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(if (isLandscape) 18.dp else 30.dp))
+            Text(
+                "Your data is stored locally on this device.",
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF6D7079)
             )
         }
-
-        Spacer(modifier = Modifier.height(30.dp))
-        Text(
-            "Your data is stored locally on this device.",
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF6D7079)
-        )
     }
 
     if (showAddDialog) {
