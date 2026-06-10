@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,51 +47,29 @@ fun HabitNameCell(
     onMoveDown: () -> Unit
 ) {
     var dragDistance by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
     var didDrag by remember { mutableStateOf(false) }
-    val rowBackground = if (isDragging) {
-        habit.color.copy(alpha = 0.18f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-    }
 
     Row(
         modifier = Modifier
             .height(CellSize)
             .fillMaxWidth()
-            .padding(end = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(rowBackground)
+            .padding(horizontal = 12.dp)
             .semantics {
                 contentDescription = buildString {
                     append("Habit ${habit.name}")
                     if (habit.subtitle.isNotBlank()) append(", ${habit.subtitle}")
-                    append(". Tap to edit.")
+                    append(". Tap to edit. Long press and drag to reorder.")
                 }
                 role = Role.Button
             }
-            .combinedClickable(onClick = {
-                if (didDrag) didDrag = false else onEdit()
-            }),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        DragGrip(
-            habitName = habit.name,
-            modifier = Modifier.pointerInput(habit.id, canMoveUp, canMoveDown) {
+            .pointerInput(habit.id, canMoveUp, canMoveDown) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         dragDistance = 0f
-                        isDragging = true
                         didDrag = true
                     },
-                    onDragEnd = {
-                        dragDistance = 0f
-                        isDragging = false
-                    },
-                    onDragCancel = {
-                        dragDistance = 0f
-                        isDragging = false
-                    },
+                    onDragEnd = { dragDistance = 0f },
+                    onDragCancel = { dragDistance = 0f },
                     onDrag = { _, dragAmount ->
                         dragDistance += dragAmount.y
                         if (dragDistance > 32f && canMoveDown) {
@@ -104,52 +82,35 @@ fun HabitNameCell(
                     }
                 )
             }
-        )
+            .combinedClickable(onClick = {
+                if (didDrag) {
+                    didDrag = false
+                } else {
+                    onEdit()
+                }
+            }),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(habit.color))
-        Spacer(modifier = Modifier.width(7.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             Text(
                 habit.name,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF23232B)
             )
             if (habit.subtitle.isNotBlank()) {
                 Text(
                     habit.subtitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF777A83)
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun DragGrip(habitName: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .width(24.dp)
-            .height(CellSize)
-            .semantics { contentDescription = "Reorder $habitName" },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        repeat(3) {
-            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                repeat(2) {
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.75f))
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(2.dp))
         }
     }
 }

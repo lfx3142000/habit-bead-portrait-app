@@ -3,8 +3,8 @@ package com.habitbeads.app
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-val CellSize = 48.dp
-val HabitColumnWidth = 212.dp
+val CellSize = 54.dp
+val HabitColumnWidth = 132.dp
 
 data class Habit(
     val id: Int,
