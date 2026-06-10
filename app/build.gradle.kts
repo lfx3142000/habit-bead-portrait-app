@@ -9,11 +9,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.habitbeads.app"
+        applicationId = "com.habitbeads.portrait"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.1.0-portrait"
     }
 
     compileOptions {
