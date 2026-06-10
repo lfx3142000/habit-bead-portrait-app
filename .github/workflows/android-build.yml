@@ -6,10 +6,20 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      build_variant:
+        description: Gradle build variant to assemble
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -32,5 +42,5 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: habit-beads-debug-apk
+          name: habit-beads-${{ inputs.build_variant || 'debug' }}-apk
           path: app/build/outputs/apk/debug/*.apk
