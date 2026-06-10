@@ -1,10 +1,16 @@
 name: Android Build
 
+run-name: >-
+  Android Build
+  ${{ github.event_name == 'issues' && github.event.issue.title || github.ref_name }}
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  issues:
+    types: [ opened ]
   workflow_dispatch:
     inputs:
       build_variant:
@@ -17,6 +23,7 @@ on:
 
 jobs:
   build:
+    if: github.event_name != 'issues' || startsWith(github.event.issue.title, '[build apk]')
     runs-on: ubuntu-latest
     permissions:
       contents: read
