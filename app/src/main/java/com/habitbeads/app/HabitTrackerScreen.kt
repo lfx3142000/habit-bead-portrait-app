@@ -51,12 +51,9 @@ import com.habitbeads.app.data.DatabaseProvider
 import com.habitbeads.app.data.HabitRepository
 import kotlinx.coroutines.launch
 
-private val PortraitBackground = Color(0xFFFCFAF7)
-private val CardBorder = Color(0xFFE5E1DA)
-private val GridLine = Color(0xFFECE8E1)
-private val TodayHighlight = Color(0xFFFFF1C9)
 private val AddButtonBlue = Color(0xFF3F6DDB)
-private val MinLandscapeCellSize = 44.dp
+private val MinLandscapeCellSize = 54.dp
+private val LandscapeHabitColumnWidth = 188.dp
 
 @Composable
 fun HabitTrackerScreen(
@@ -117,7 +114,7 @@ fun HabitTrackerScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(PortraitBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         val isLandscape = maxWidth > maxHeight
         val horizontalPadding = if (isLandscape) 12.dp else 16.dp
@@ -293,7 +290,11 @@ private fun TrackerTopBar(onOptions: () -> Unit, onAddHabit: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onOptions, modifier = Modifier.size(48.dp)) {
-                Icon(painterResource(R.drawable.ic_refresh_24), contentDescription = "Options")
+                Icon(
+                    painterResource(R.drawable.ic_options_24),
+                    contentDescription = "Options",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
             Surface(
                 onClick = onAddHabit,
@@ -323,14 +324,14 @@ private fun PortraitTrackerCard(
     onIncrement: (Habit, DayInfo, Int) -> Unit,
     onDecrement: (Habit, DayInfo, Int) -> Unit
 ) {
-    val habitColumnWidth = if (isLandscape) 140.dp else HabitColumnWidth
+    val habitColumnWidth = if (isLandscape) LandscapeHabitColumnWidth else HabitColumnWidth
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, CardBorder, RoundedCornerShape(20.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.32f), RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -347,7 +348,8 @@ private fun PortraitTrackerCard(
                 Column(
                     modifier = Modifier
                         .width(habitColumnWidth)
-                        .border(width = 0.5.dp, color = GridLine)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
                 ) {
                     Spacer(modifier = Modifier.height(44.dp))
                     habits.forEachIndexed { index, habit ->
@@ -368,7 +370,13 @@ private fun PortraitTrackerCard(
                         Column(
                             modifier = Modifier
                                 .width(gridCellSize)
-                                .background(if (day.isToday) TodayHighlight else Color.Transparent)
+                                .background(
+                                    if (day.isToday) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    }
+                                )
                         ) {
                             DayHeader(day, cellSize = gridCellSize)
                             habits.forEach { habit ->

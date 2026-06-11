@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun DayHeader(day: DayInfo, cellSize: Dp = CellSize) {
+    val isSunday = day.dayLabel == "Sun"
     Column(
         modifier = Modifier
             .width(cellSize)
@@ -46,7 +47,12 @@ fun DayHeader(day: DayInfo, cellSize: Dp = CellSize) {
         Text(
             day.dayLabel.take(1),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontWeight = if (isSunday || day.isToday) FontWeight.Bold else FontWeight.Normal,
+            color = when {
+                day.isToday -> MaterialTheme.colorScheme.onPrimaryContainer
+                isSunday -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
         Text(
             day.dateLabel,
