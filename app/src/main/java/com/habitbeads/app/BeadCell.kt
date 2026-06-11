@@ -88,7 +88,7 @@ fun BeadCell(
         }
         .combinedClickable(onClick = onIncrement, onLongClick = onDecrement)
 
-    Box(modifier = beadModifier, contentAlignment = Alignment.Center)
+    Box(modifier = beadModifier)
 }
 
 private fun beadHueForCount(base: Color, count: Int): Color {
