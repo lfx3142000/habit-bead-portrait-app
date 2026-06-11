@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -133,15 +134,15 @@ class HabitWidgetConfigActivity : Activity() {
     private var widgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
     private var selectedHabitId: Int = -1
     private var opacityPercent: Int = 92
+    private var isDefaultSettings: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setResult(RESULT_CANCELED)
         widgetId = intent?.extras?.getInt(EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
-        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
-            finish()
-            return
+        isDefaultSettings = widgetId == AppWidgetManager.INVALID_APPWIDGET_ID
+        if (!isDefaultSettings) {
+            setResult(RESULT_CANCELED)
         }
 
         opacityPercent = WidgetConfigStore.loadOpacity(this, widgetId)
@@ -152,9 +153,19 @@ class HabitWidgetConfigActivity : Activity() {
             setBackgroundColor(0xFFFFF8F0.toInt())
         }
         val title = TextView(this).apply {
-            text = "Widget options"
+            text = if (isDefaultSettings) "Default widget options" else "Widget options"
             textSize = 22f
             setTextColor(0xFF241F1B.toInt())
+        }
+        val subtitle = TextView(this).apply {
+            text = if (isDefaultSettings) {
+                "These settings apply to newly added widgets and widgets without custom settings."
+            } else {
+                "These settings apply to this widget."
+            }
+            textSize = 13f
+            setTextColor(0xFF665A50.toInt())
+            setPadding(0, 6, 0, 8)
         }
         val habitLabel = TextView(this).apply {
             text = "Primary habit"
@@ -169,15 +180,16 @@ class HabitWidgetConfigActivity : Activity() {
             setPadding(0, 28, 0, 8)
         }
         val opacitySeek = SeekBar(this).apply {
-            max = 80
-            progress = opacityPercent - 20
+            max = WidgetOpacityChoice.values().lastIndex
+            progress = WidgetOpacityChoice.nearest(opacityPercent).ordinal
         }
         fun updateOpacityLabel() {
-            opacityLabel.text = "Background opacity: $opacityPercent%"
+            val choice = WidgetOpacityChoice.nearest(opacityPercent)
+            opacityLabel.text = "Background: ${choice.label} (${choice.opacityPercent}%)"
         }
         opacitySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                opacityPercent = progress + 20
+                opacityPercent = WidgetOpacityChoice.values()[progress].opacityPercent
                 updateOpacityLabel()
             }
 
@@ -187,17 +199,20 @@ class HabitWidgetConfigActivity : Activity() {
         updateOpacityLabel()
 
         val save = Button(this).apply {
-            text = "Save widget"
+            text = if (isDefaultSettings) "Save defaults" else "Save widget"
             setOnClickListener {
                 WidgetConfigStore.save(this@HabitWidgetConfigActivity, widgetId, opacityPercent, selectedHabitId)
                 HabitWidgetUpdater.updateAll(this@HabitWidgetConfigActivity)
-                val result = Intent().putExtra(EXTRA_APPWIDGET_ID, widgetId)
-                setResult(RESULT_OK, result)
+                if (!isDefaultSettings) {
+                    val result = Intent().putExtra(EXTRA_APPWIDGET_ID, widgetId)
+                    setResult(RESULT_OK, result)
+                }
                 finish()
             }
         }
 
         root.addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(subtitle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(habitLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(habitSpinner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(opacityLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -232,10 +247,24 @@ class HabitWidgetConfigActivity : Activity() {
     }
 }
 
+private enum class WidgetOpacityChoice(val label: String, val opacityPercent: Int) {
+    VeryTransparent("Very transparent", 35),
+    Translucent("Translucent", 60),
+    Soft("Soft", 82),
+    Solid("Solid", 100);
+
+    companion object {
+        fun nearest(opacityPercent: Int): WidgetOpacityChoice {
+            return values().minByOrNull { kotlin.math.abs(it.opacityPercent - opacityPercent) } ?: Soft
+        }
+    }
+}
+
 private data class WidgetPalette(
     val background: Int,
     val text: Int,
-    val mutedText: Int
+    val mutedText: Int,
+    val rule: Int
 )
 
 private data class WidgetData(
@@ -316,6 +345,7 @@ private fun baseWidget(context: Context, title: String, subtitle: String, palett
         setTextColor(R.id.widget_title, palette.text)
         setTextColor(R.id.widget_subtitle, palette.mutedText)
         setInt(R.id.widget_root, "setBackgroundColor", withOpacity(palette.background, opacity))
+        setInt(R.id.widget_header_rule, "setBackgroundColor", palette.rule)
         setOnClickPendingIntent(R.id.widget_root, openAppIntent(context))
     }
 }
@@ -329,8 +359,11 @@ private fun addHabitRow(
     allowQuickAdd: Boolean
 ) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
+        setViewVisibility(R.id.widget_row_bead, View.VISIBLE)
+        setTextViewText(R.id.widget_row_bead, if (count > 0) "\u25CF" else "\u25CB")
+        setTextColor(R.id.widget_row_bead, if (count > 0) habit.color.toArgb() else palette.mutedText)
         setTextViewText(R.id.widget_row_name, habit.name)
-        setTextViewText(R.id.widget_row_value, if (count > 0) "\u25CF $count" else "\u25CB")
+        setTextViewText(R.id.widget_row_value, count.takeIf { it > 0 }?.toString() ?: "")
         setTextColor(R.id.widget_row_name, palette.text)
         setTextColor(R.id.widget_row_value, if (count > 0) habit.color.toArgb() else palette.mutedText)
         if (allowQuickAdd) {
@@ -342,6 +375,9 @@ private fun addHabitRow(
 
 private fun addWeeklyRow(context: Context, parent: RemoteViews, name: String, beads: String, beadColor: Int, palette: WidgetPalette) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
+        setViewVisibility(R.id.widget_row_bead, View.VISIBLE)
+        setTextViewText(R.id.widget_row_bead, "\u25CF")
+        setTextColor(R.id.widget_row_bead, beadColor)
         setTextViewText(R.id.widget_row_name, name)
         setTextViewText(R.id.widget_row_value, beads)
         setTextColor(R.id.widget_row_name, palette.text)
@@ -353,6 +389,7 @@ private fun addWeeklyRow(context: Context, parent: RemoteViews, name: String, be
 
 private fun addMessageRow(context: Context, parent: RemoteViews, message: String, palette: WidgetPalette) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
+        setViewVisibility(R.id.widget_row_bead, View.GONE)
         setTextViewText(R.id.widget_row_name, message)
         setTextViewText(R.id.widget_row_value, "")
         setTextColor(R.id.widget_row_name, palette.mutedText)
@@ -394,10 +431,10 @@ private fun todayKey(): String {
 
 private fun widgetPalette(choice: AppThemeChoice): WidgetPalette {
     return when (choice) {
-        AppThemeChoice.Warm -> WidgetPalette(0xFFFFF4E8.toInt(), 0xFF241F1B.toInt(), 0xFF665A50.toInt())
-        AppThemeChoice.Ocean -> WidgetPalette(0xFFEFF8FA.toInt(), 0xFF172126.toInt(), 0xFF52656D.toInt())
-        AppThemeChoice.Forest -> WidgetPalette(0xFFF2F7EA.toInt(), 0xFF202217.toInt(), 0xFF59614B.toInt())
-        AppThemeChoice.Grape -> WidgetPalette(0xFFF7F0FA.toInt(), 0xFF251F24.toInt(), 0xFF655A68.toInt())
+        AppThemeChoice.Warm -> WidgetPalette(0xFFFFF4E8.toInt(), 0xFF241F1B.toInt(), 0xFF665A50.toInt(), 0xFFE8D8C6.toInt())
+        AppThemeChoice.Ocean -> WidgetPalette(0xFFEFF8FA.toInt(), 0xFF172126.toInt(), 0xFF52656D.toInt(), 0xFFD6E7EC.toInt())
+        AppThemeChoice.Forest -> WidgetPalette(0xFFF2F7EA.toInt(), 0xFF202217.toInt(), 0xFF59614B.toInt(), 0xFFDDE7D2.toInt())
+        AppThemeChoice.Grape -> WidgetPalette(0xFFF7F0FA.toInt(), 0xFF251F24.toInt(), 0xFF655A68.toInt(), 0xFFE5D8EA.toInt())
     }
 }
 
@@ -405,24 +442,35 @@ private object WidgetConfigStore {
     private const val Name = "habit_widget_config"
     private const val OpacityPrefix = "opacity_"
     private const val HabitPrefix = "habit_"
+    private const val DefaultWidgetId = -1
 
     fun save(context: Context, widgetId: Int, opacityPercent: Int, habitId: Int) {
+        val normalizedWidgetId = normalizeWidgetId(widgetId)
         context.getSharedPreferences(Name, Context.MODE_PRIVATE)
             .edit()
-            .putInt("$OpacityPrefix$widgetId", opacityPercent.coerceIn(20, 100))
-            .putInt("$HabitPrefix$widgetId", habitId)
+            .putInt("$OpacityPrefix$normalizedWidgetId", WidgetOpacityChoice.nearest(opacityPercent).opacityPercent)
+            .putInt("$HabitPrefix$normalizedWidgetId", habitId)
             .apply()
     }
 
     fun loadOpacity(context: Context, widgetId: Int): Int {
-        return context.getSharedPreferences(Name, Context.MODE_PRIVATE)
-            .getInt("$OpacityPrefix$widgetId", 92)
-            .coerceIn(20, 100)
+        val normalizedWidgetId = normalizeWidgetId(widgetId)
+        val prefs = context.getSharedPreferences(Name, Context.MODE_PRIVATE)
+        return when {
+            prefs.contains("$OpacityPrefix$normalizedWidgetId") -> prefs.getInt("$OpacityPrefix$normalizedWidgetId", 82)
+            prefs.contains("$OpacityPrefix$DefaultWidgetId") -> prefs.getInt("$OpacityPrefix$DefaultWidgetId", 82)
+            else -> 82
+        }
     }
 
     fun loadHabitId(context: Context, widgetId: Int): Int {
-        return context.getSharedPreferences(Name, Context.MODE_PRIVATE)
-            .getInt("$HabitPrefix$widgetId", -1)
+        val normalizedWidgetId = normalizeWidgetId(widgetId)
+        val prefs = context.getSharedPreferences(Name, Context.MODE_PRIVATE)
+        return when {
+            prefs.contains("$HabitPrefix$normalizedWidgetId") -> prefs.getInt("$HabitPrefix$normalizedWidgetId", -1)
+            prefs.contains("$HabitPrefix$DefaultWidgetId") -> prefs.getInt("$HabitPrefix$DefaultWidgetId", -1)
+            else -> -1
+        }
     }
 
     fun clear(context: Context, widgetId: Int) {
@@ -431,6 +479,10 @@ private object WidgetConfigStore {
             .remove("$OpacityPrefix$widgetId")
             .remove("$HabitPrefix$widgetId")
             .apply()
+    }
+
+    private fun normalizeWidgetId(widgetId: Int): Int {
+        return if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) DefaultWidgetId else widgetId
     }
 }
 
