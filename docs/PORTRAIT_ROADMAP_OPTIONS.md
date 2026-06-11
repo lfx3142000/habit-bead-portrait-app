@@ -4,10 +4,9 @@ This document captures candidate next steps for the portrait app. These are plan
 
 ## Table and tracker polish
 
-- Add vertical scrolling inside the tracker area so users can add many habits without pushing controls off screen.
-- Keep the day header visible while scrolling through long habit lists.
-- Keep the habit-name column visible while horizontally scrolling through days.
-- Add subtle left and right edge fades to communicate that more days can be scrolled.
+- Add smooth vertical scrolling inside the tracker area so users can add many habits without pushing controls off screen.
+- Keep horizontal and vertical table scrolling predictable without sticky headers or sticky columns.
+- Add subtle scroll indicators only if phone testing shows users need them.
 - Consider a stronger current-day anchor so portrait opens near today while still allowing review of older days.
 
 ## Widget options
@@ -60,7 +59,6 @@ This document captures candidate next steps for the portrait app. These are plan
 - Custom themes, calmer palette packs, and habit color sets.
 - Habit icons or initials.
 - Export and backup.
-- Advanced stats, weekly summaries, and streak views.
 - Optional app lock or privacy mode.
 
 ### Pricing ideas

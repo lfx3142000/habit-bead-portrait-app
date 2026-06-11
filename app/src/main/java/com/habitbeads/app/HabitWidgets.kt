@@ -1,12 +1,22 @@
 package com.habitbeads.app
 
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.RemoteViews
+import android.widget.SeekBar
+import android.widget.Spinner
+import android.widget.TextView
 import androidx.compose.ui.graphics.toArgb
 import com.habitbeads.app.data.DatabaseProvider
 import com.habitbeads.app.data.HabitRepository
@@ -24,17 +34,29 @@ class TodayHabitWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         HabitWidgetUpdater.updateToday(context, manager, appWidgetIds)
     }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { WidgetConfigStore.clear(context, it) }
+    }
 }
 
 class SingleHabitWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         HabitWidgetUpdater.updateSingleHabit(context, manager, appWidgetIds)
     }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { WidgetConfigStore.clear(context, it) }
+    }
 }
 
 class WeeklyStripWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         HabitWidgetUpdater.updateWeeklyStrip(context, manager, appWidgetIds)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { WidgetConfigStore.clear(context, it) }
     }
 }
 
@@ -81,7 +103,7 @@ object HabitWidgetUpdater {
         CoroutineScope(Dispatchers.IO).launch {
             val data = loadWidgetData(context)
             widgetIds.forEach { id ->
-                manager.updateAppWidget(id, buildTodayWidget(context, data))
+                manager.updateAppWidget(id, buildTodayWidget(context, data, id))
             }
         }
     }
@@ -91,7 +113,7 @@ object HabitWidgetUpdater {
         CoroutineScope(Dispatchers.IO).launch {
             val data = loadWidgetData(context)
             widgetIds.forEach { id ->
-                manager.updateAppWidget(id, buildSingleHabitWidget(context, data))
+                manager.updateAppWidget(id, buildSingleHabitWidget(context, data, id))
             }
         }
     }
@@ -101,7 +123,110 @@ object HabitWidgetUpdater {
         CoroutineScope(Dispatchers.IO).launch {
             val data = loadWidgetData(context)
             widgetIds.forEach { id ->
-                manager.updateAppWidget(id, buildWeeklyStripWidget(context, data))
+                manager.updateAppWidget(id, buildWeeklyStripWidget(context, data, id))
+            }
+        }
+    }
+}
+
+class HabitWidgetConfigActivity : Activity() {
+    private var widgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
+    private var selectedHabitId: Int = -1
+    private var opacityPercent: Int = 92
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setResult(RESULT_CANCELED)
+        widgetId = intent?.extras?.getInt(EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+            ?: AppWidgetManager.INVALID_APPWIDGET_ID
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            finish()
+            return
+        }
+
+        opacityPercent = WidgetConfigStore.loadOpacity(this, widgetId)
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 40)
+            setBackgroundColor(0xFFFFF8F0.toInt())
+        }
+        val title = TextView(this).apply {
+            text = "Widget options"
+            textSize = 22f
+            setTextColor(0xFF241F1B.toInt())
+        }
+        val habitLabel = TextView(this).apply {
+            text = "Primary habit"
+            textSize = 14f
+            setTextColor(0xFF665A50.toInt())
+            setPadding(0, 28, 0, 8)
+        }
+        val habitSpinner = Spinner(this)
+        val opacityLabel = TextView(this).apply {
+            textSize = 14f
+            setTextColor(0xFF665A50.toInt())
+            setPadding(0, 28, 0, 8)
+        }
+        val opacitySeek = SeekBar(this).apply {
+            max = 80
+            progress = opacityPercent - 20
+        }
+        fun updateOpacityLabel() {
+            opacityLabel.text = "Background opacity: $opacityPercent%"
+        }
+        opacitySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                opacityPercent = progress + 20
+                updateOpacityLabel()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+        updateOpacityLabel()
+
+        val save = Button(this).apply {
+            text = "Save widget"
+            setOnClickListener {
+                WidgetConfigStore.save(this@HabitWidgetConfigActivity, widgetId, opacityPercent, selectedHabitId)
+                HabitWidgetUpdater.updateAll(this@HabitWidgetConfigActivity)
+                val result = Intent().putExtra(EXTRA_APPWIDGET_ID, widgetId)
+                setResult(RESULT_OK, result)
+                finish()
+            }
+        }
+
+        root.addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(habitLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(habitSpinner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(opacityLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(opacitySeek, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(save, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = 36
+        })
+        setContentView(root)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val habits = repository(this@HabitWidgetConfigActivity).loadHabits()
+            val names = habits.map { it.name }.ifEmpty { listOf("First habit") }
+            val ids = habits.map { it.id }.ifEmpty { listOf(-1) }
+            selectedHabitId = WidgetConfigStore.loadHabitId(this@HabitWidgetConfigActivity, widgetId)
+                .takeIf { it in ids } ?: ids.first()
+            runOnUiThread {
+                habitSpinner.adapter = ArrayAdapter(
+                    this@HabitWidgetConfigActivity,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    names
+                )
+                habitSpinner.setSelection(ids.indexOf(selectedHabitId).coerceAtLeast(0))
+                habitSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                        selectedHabitId = ids.getOrElse(position) { -1 }
+                    }
+
+                    override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                }
             }
         }
     }
@@ -131,8 +256,8 @@ private suspend fun loadWidgetData(context: Context): WidgetData {
     )
 }
 
-private fun buildTodayWidget(context: Context, data: WidgetData): RemoteViews {
-    val views = baseWidget(context, "Today", "Tap a habit to add a bead", data.palette)
+private fun buildTodayWidget(context: Context, data: WidgetData, widgetId: Int): RemoteViews {
+    val views = baseWidget(context, "Today", "Tap a habit to add a bead", data.palette, widgetId)
     val todayKey = todayKey()
     val habits = data.habits.take(5)
     if (habits.isEmpty()) {
@@ -146,13 +271,15 @@ private fun buildTodayWidget(context: Context, data: WidgetData): RemoteViews {
     return views
 }
 
-private fun buildSingleHabitWidget(context: Context, data: WidgetData): RemoteViews {
-    val habit = data.habits.firstOrNull()
+private fun buildSingleHabitWidget(context: Context, data: WidgetData, widgetId: Int): RemoteViews {
+    val selectedHabitId = WidgetConfigStore.loadHabitId(context, widgetId)
+    val habit = data.habits.firstOrNull { it.id == selectedHabitId } ?: data.habits.firstOrNull()
     val views = baseWidget(
         context,
         habit?.name ?: "Single Habit",
         habit?.subtitle?.takeIf { it.isNotBlank() } ?: "Tap to add today's bead",
-        data.palette
+        data.palette,
+        widgetId
     )
     if (habit == null) {
         addMessageRow(context, views, "Open Habit Beads to add a habit", data.palette)
@@ -163,8 +290,8 @@ private fun buildSingleHabitWidget(context: Context, data: WidgetData): RemoteVi
     return views
 }
 
-private fun buildWeeklyStripWidget(context: Context, data: WidgetData): RemoteViews {
-    val views = baseWidget(context, "Weekly Strip", "Last 7 days", data.palette)
+private fun buildWeeklyStripWidget(context: Context, data: WidgetData, widgetId: Int): RemoteViews {
+    val views = baseWidget(context, "Weekly Strip", "Last 7 days", data.palette, widgetId)
     val habits = data.habits.take(3)
     if (habits.isEmpty()) {
         addMessageRow(context, views, "Open Habit Beads to add habits", data.palette)
@@ -172,7 +299,7 @@ private fun buildWeeklyStripWidget(context: Context, data: WidgetData): RemoteVi
         habits.forEach { habit ->
             val beadText = data.days.joinToString(" ") { day ->
                 val count = data.counts["${habit.id}:${day.dateKey}"] ?: 0
-                if (count > 0) "*" else "o"
+                if (count > 0) "\u25CF" else "\u25CB"
             }
             addWeeklyRow(context, views, habit.name, beadText, habit.color.toArgb(), data.palette)
         }
@@ -180,14 +307,15 @@ private fun buildWeeklyStripWidget(context: Context, data: WidgetData): RemoteVi
     return views
 }
 
-private fun baseWidget(context: Context, title: String, subtitle: String, palette: WidgetPalette): RemoteViews {
+private fun baseWidget(context: Context, title: String, subtitle: String, palette: WidgetPalette, widgetId: Int): RemoteViews {
+    val opacity = WidgetConfigStore.loadOpacity(context, widgetId)
     return RemoteViews(context.packageName, R.layout.widget_habit_beads).apply {
         removeAllViews(R.id.widget_body)
         setTextViewText(R.id.widget_title, title)
         setTextViewText(R.id.widget_subtitle, subtitle)
         setTextColor(R.id.widget_title, palette.text)
         setTextColor(R.id.widget_subtitle, palette.mutedText)
-        setInt(R.id.widget_root, "setBackgroundColor", palette.background)
+        setInt(R.id.widget_root, "setBackgroundColor", withOpacity(palette.background, opacity))
         setOnClickPendingIntent(R.id.widget_root, openAppIntent(context))
     }
 }
@@ -202,7 +330,7 @@ private fun addHabitRow(
 ) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
         setTextViewText(R.id.widget_row_name, habit.name)
-        setTextViewText(R.id.widget_row_value, if (count > 0) "* $count" else "o")
+        setTextViewText(R.id.widget_row_value, if (count > 0) "\u25CF $count" else "\u25CB")
         setTextColor(R.id.widget_row_name, palette.text)
         setTextColor(R.id.widget_row_value, if (count > 0) habit.color.toArgb() else palette.mutedText)
         if (allowQuickAdd) {
@@ -271,4 +399,42 @@ private fun widgetPalette(choice: AppThemeChoice): WidgetPalette {
         AppThemeChoice.Forest -> WidgetPalette(0xFFF2F7EA.toInt(), 0xFF202217.toInt(), 0xFF59614B.toInt())
         AppThemeChoice.Grape -> WidgetPalette(0xFFF7F0FA.toInt(), 0xFF251F24.toInt(), 0xFF655A68.toInt())
     }
+}
+
+private object WidgetConfigStore {
+    private const val Name = "habit_widget_config"
+    private const val OpacityPrefix = "opacity_"
+    private const val HabitPrefix = "habit_"
+
+    fun save(context: Context, widgetId: Int, opacityPercent: Int, habitId: Int) {
+        context.getSharedPreferences(Name, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("$OpacityPrefix$widgetId", opacityPercent.coerceIn(20, 100))
+            .putInt("$HabitPrefix$widgetId", habitId)
+            .apply()
+    }
+
+    fun loadOpacity(context: Context, widgetId: Int): Int {
+        return context.getSharedPreferences(Name, Context.MODE_PRIVATE)
+            .getInt("$OpacityPrefix$widgetId", 92)
+            .coerceIn(20, 100)
+    }
+
+    fun loadHabitId(context: Context, widgetId: Int): Int {
+        return context.getSharedPreferences(Name, Context.MODE_PRIVATE)
+            .getInt("$HabitPrefix$widgetId", -1)
+    }
+
+    fun clear(context: Context, widgetId: Int) {
+        context.getSharedPreferences(Name, Context.MODE_PRIVATE)
+            .edit()
+            .remove("$OpacityPrefix$widgetId")
+            .remove("$HabitPrefix$widgetId")
+            .apply()
+    }
+}
+
+private fun withOpacity(rgb: Int, opacityPercent: Int): Int {
+    val alpha = (opacityPercent.coerceIn(20, 100) * 255 / 100) and 0xFF
+    return (alpha shl 24) or (rgb and 0x00FFFFFF)
 }

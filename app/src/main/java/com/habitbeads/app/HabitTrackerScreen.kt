@@ -367,48 +367,22 @@ private fun PortraitTrackerCard(
                 isLandscape -> MinLandscapeCellSize
                 else -> CellSize
             }
-            val gridModifier = if (fitsLandscape) Modifier.width(availableGridWidth) else Modifier.horizontalScroll(horizontalScrollState)
-            val tableBodyMaxHeight = if (isLandscape) 216.dp else 386.dp
+            val tableMaxHeight = if (isLandscape) 260.dp else 430.dp
 
-            Column(modifier = Modifier.heightIn(max = if (isLandscape) 260.dp else 430.dp)) {
+            Box(
+                modifier = Modifier
+                    .heightIn(max = tableMaxHeight)
+                    .verticalScroll(verticalScrollState)
+                    .horizontalScroll(horizontalScrollState)
+            ) {
                 Row {
-                    Box(
-                        modifier = Modifier
-                            .width(habitColumnWidth)
-                            .height(44.dp)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
-                    )
-                    Row(modifier = gridModifier) {
-                        days.forEach { day ->
-                            Box(
-                                modifier = Modifier
-                                    .width(gridCellSize)
-                                    .background(
-                                        if (day.isToday) {
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        }
-                                    )
-                            ) {
-                                DayHeader(day, cellSize = gridCellSize)
-                            }
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .heightIn(max = tableBodyMaxHeight)
-                        .verticalScroll(verticalScrollState)
-                ) {
                     Column(
                         modifier = Modifier
                             .width(habitColumnWidth)
                             .background(MaterialTheme.colorScheme.surface)
                             .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
                     ) {
+                        Spacer(modifier = Modifier.height(44.dp))
                         habits.forEachIndexed { index, habit ->
                             HabitNameCell(
                                 habit = habit,
@@ -422,34 +396,33 @@ private fun PortraitTrackerCard(
                         }
                     }
 
-                    Row(modifier = gridModifier) {
-                        days.forEach { day ->
-                            Column(
-                                modifier = Modifier
-                                    .width(gridCellSize)
-                                    .background(
-                                        if (day.isToday) {
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        }
-                                    )
-                            ) {
-                                habits.forEach { habit ->
-                                    val key = "${habit.id}:${day.dateKey}"
-                                    val count = counts[key] ?: 0
-                                    BeadCell(
-                                        habitName = habit.name,
-                                        day = day,
-                                        count = count,
-                                        color = habit.color,
-                                        isToday = day.isToday,
-                                        showNumber = showBeadNumbers,
-                                        cellSize = gridCellSize,
-                                        onIncrement = { onIncrement(habit, day, count) },
-                                        onDecrement = { onDecrement(habit, day, count) }
-                                    )
-                                }
+                    days.forEach { day ->
+                        Column(
+                            modifier = Modifier
+                                .width(gridCellSize)
+                                .background(
+                                    if (day.isToday) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    }
+                                )
+                        ) {
+                            DayHeader(day, cellSize = gridCellSize)
+                            habits.forEach { habit ->
+                                val key = "${habit.id}:${day.dateKey}"
+                                val count = counts[key] ?: 0
+                                BeadCell(
+                                    habitName = habit.name,
+                                    day = day,
+                                    count = count,
+                                    color = habit.color,
+                                    isToday = day.isToday,
+                                    showNumber = showBeadNumbers,
+                                    cellSize = gridCellSize,
+                                    onIncrement = { onIncrement(habit, day, count) },
+                                    onDecrement = { onDecrement(habit, day, count) }
+                                )
                             }
                         }
                     }

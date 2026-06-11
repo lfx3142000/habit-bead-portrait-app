@@ -15,6 +15,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".HabitWidgetConfigActivity"
+            android:exported="true" />
+
         <receiver
             android:name=".HabitWidgetActionReceiver"
             android:exported="false" />

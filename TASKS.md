@@ -60,13 +60,12 @@ Habit Beads is now a working Android/Compose prototype on the `ci-validate-build
 ## Next tasks
 
 - [ ] Choose next roadmap direction from `docs/PORTRAIT_ROADMAP_OPTIONS.md`
-- [ ] Add vertical scrolling inside the tracker table for long habit lists
-- [ ] Consider sticky day headers and/or sticky habit-name column for larger tables
+- [ ] Tune smooth two-axis table scrolling after phone testing
 - [ ] Verify Room persistence after close/reopen
 - [ ] Verify selected theme and bead-number preference persist after close/reopen
 - [ ] Verify decrement-to-zero persists as empty after close/reopen
 - [ ] Consider migration from old SharedPreferences test builds into Room
-- [ ] Decide widget scope: Today widget, Weekly strip widget, Single habit widget, or reminders
+- [ ] Polish widget configuration after phone testing
 - [ ] Decide monetization scope: free-only, one-time Pro, or optional supporter tier
 
 ## Roadmap options to choose from
