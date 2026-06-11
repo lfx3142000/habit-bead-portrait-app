@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -27,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,9 +38,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -56,9 +56,15 @@ private val CardBorder = Color(0xFFE5E1DA)
 private val GridLine = Color(0xFFECE8E1)
 private val TodayHighlight = Color(0xFFFFF1C9)
 private val AddButtonBlue = Color(0xFF3F6DDB)
+private val MinLandscapeCellSize = 44.dp
 
 @Composable
-fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThemeChoice) -> Unit) {
+fun HabitTrackerScreen(
+    themeChoice: AppThemeChoice,
+    onThemeChoiceChange: (AppThemeChoice) -> Unit,
+    showBeadNumbers: Boolean,
+    onShowBeadNumbersChange: (Boolean) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository = remember(context) {
@@ -118,6 +124,14 @@ fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThe
         val topPadding = if (isLandscape) 18.dp else 72.dp
         val contentMaxWidth = maxWidth
 
+        LaunchedEffect(isLoaded, habits.size, isLandscape) {
+            if (isLoaded && habits.isNotEmpty() && !isLandscape) {
+                withFrameNanos { }
+                withFrameNanos { }
+                horizontalScrollState.scrollTo(horizontalScrollState.maxValue)
+            }
+        }
+
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -141,6 +155,7 @@ fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThe
                     days = days,
                     counts = counts,
                     isLandscape = isLandscape,
+                    showBeadNumbers = showBeadNumbers,
                     horizontalScrollState = horizontalScrollState,
                     onEditHabit = { habitToEdit = it },
                     onMoveHabit = ::moveHabit,
@@ -233,6 +248,8 @@ fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThe
         OptionsDialog(
             themeChoice = themeChoice,
             onThemeChoiceChange = onThemeChoiceChange,
+            showBeadNumbers = showBeadNumbers,
+            onShowBeadNumbersChange = onShowBeadNumbersChange,
             onReset = {
                 showOptionsDialog = false
                 showResetDialog = true
@@ -299,13 +316,13 @@ private fun PortraitTrackerCard(
     days: List<DayInfo>,
     counts: Map<String, Int>,
     isLandscape: Boolean,
+    showBeadNumbers: Boolean,
     horizontalScrollState: androidx.compose.foundation.ScrollState,
     onEditHabit: (Habit) -> Unit,
     onMoveHabit: (Int, Int) -> Unit,
     onIncrement: (Habit, DayInfo, Int) -> Unit,
     onDecrement: (Habit, DayInfo, Int) -> Unit
 ) {
-    val gridCellSize = if (isLandscape) 46.dp else CellSize
     val habitColumnWidth = if (isLandscape) 140.dp else HabitColumnWidth
 
     Surface(
@@ -316,47 +333,59 @@ private fun PortraitTrackerCard(
         color = Color.White,
         shadowElevation = 2.dp
     ) {
-        Row {
-            Column(
-                modifier = Modifier
-                    .width(habitColumnWidth)
-                    .border(width = 0.5.dp, color = GridLine)
-            ) {
-                Spacer(modifier = Modifier.height(44.dp))
-                habits.forEachIndexed { index, habit ->
-                    HabitNameCell(
-                        habit = habit,
-                        canMoveUp = index > 0,
-                        canMoveDown = index < habits.lastIndex,
-                        rowHeight = gridCellSize,
-                        onEdit = { onEditHabit(habit) },
-                        onMoveUp = { onMoveHabit(index, index - 1) },
-                        onMoveDown = { onMoveHabit(index, index + 1) }
-                    )
-                }
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val availableGridWidth = maxWidth - habitColumnWidth
+            val fitsLandscape = isLandscape && availableGridWidth >= MinLandscapeCellSize * days.size.toFloat()
+            val gridCellSize = when {
+                fitsLandscape -> availableGridWidth / days.size.toFloat()
+                isLandscape -> MinLandscapeCellSize
+                else -> CellSize
             }
+            val gridModifier = if (fitsLandscape) Modifier.fillMaxWidth() else Modifier.horizontalScroll(horizontalScrollState)
 
-            Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
-                days.forEach { day ->
-                    Column(
-                        modifier = Modifier
-                            .width(gridCellSize)
-                            .background(if (day.isToday) TodayHighlight else Color.Transparent)
-                    ) {
-                        DayHeader(day, cellSize = gridCellSize)
-                        habits.forEach { habit ->
-                            val key = "${habit.id}:${day.dateKey}"
-                            val count = counts[key] ?: 0
-                            BeadCell(
-                                habitName = habit.name,
-                                day = day,
-                                count = count,
-                                color = habit.color,
-                                isToday = day.isToday,
-                                cellSize = gridCellSize,
-                                onIncrement = { onIncrement(habit, day, count) },
-                                onDecrement = { onDecrement(habit, day, count) }
-                            )
+            Row {
+                Column(
+                    modifier = Modifier
+                        .width(habitColumnWidth)
+                        .border(width = 0.5.dp, color = GridLine)
+                ) {
+                    Spacer(modifier = Modifier.height(44.dp))
+                    habits.forEachIndexed { index, habit ->
+                        HabitNameCell(
+                            habit = habit,
+                            canMoveUp = index > 0,
+                            canMoveDown = index < habits.lastIndex,
+                            rowHeight = gridCellSize,
+                            onEdit = { onEditHabit(habit) },
+                            onMoveUp = { onMoveHabit(index, index - 1) },
+                            onMoveDown = { onMoveHabit(index, index + 1) }
+                        )
+                    }
+                }
+
+                Row(modifier = gridModifier) {
+                    days.forEach { day ->
+                        Column(
+                            modifier = Modifier
+                                .width(gridCellSize)
+                                .background(if (day.isToday) TodayHighlight else Color.Transparent)
+                        ) {
+                            DayHeader(day, cellSize = gridCellSize)
+                            habits.forEach { habit ->
+                                val key = "${habit.id}:${day.dateKey}"
+                                val count = counts[key] ?: 0
+                                BeadCell(
+                                    habitName = habit.name,
+                                    day = day,
+                                    count = count,
+                                    color = habit.color,
+                                    isToday = day.isToday,
+                                    showNumber = showBeadNumbers,
+                                    cellSize = gridCellSize,
+                                    onIncrement = { onIncrement(habit, day, count) },
+                                    onDecrement = { onDecrement(habit, day, count) }
+                                )
+                            }
                         }
                     }
                 }
@@ -369,6 +398,8 @@ private fun PortraitTrackerCard(
 private fun OptionsDialog(
     themeChoice: AppThemeChoice,
     onThemeChoiceChange: (AppThemeChoice) -> Unit,
+    showBeadNumbers: Boolean,
+    onShowBeadNumbersChange: (Boolean) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -377,7 +408,7 @@ private fun OptionsDialog(
         title = { Text("Options") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Theme", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text("Color palette", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppThemeChoice.values().forEach { choice ->
                         if (choice == themeChoice) {
@@ -386,6 +417,17 @@ private fun OptionsDialog(
                             OutlinedButton(onClick = { onThemeChoiceChange(choice) }) { Text(choice.label) }
                         }
                     }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Bead numbers", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text("Show counts inside filled beads", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = showBeadNumbers, onCheckedChange = onShowBeadNumbersChange)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Build", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)

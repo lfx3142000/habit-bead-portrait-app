@@ -65,6 +65,7 @@ fun BeadCell(
     count: Int,
     color: Color,
     isToday: Boolean,
+    showNumber: Boolean,
     cellSize: Dp = CellSize,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit
@@ -88,15 +89,25 @@ fun BeadCell(
         }
         .combinedClickable(onClick = onIncrement, onLongClick = onDecrement)
 
-    Box(modifier = beadModifier)
+    Box(modifier = beadModifier, contentAlignment = Alignment.Center) {
+        if (showNumber && count > 0) {
+            Text(
+                count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (count >= 5) Color.White.copy(alpha = 0.94f) else Color(0xFF2F343B)
+            )
+        }
+    }
 }
 
 private fun beadHueForCount(base: Color, count: Int): Color {
     val hsv = FloatArray(3)
     android.graphics.Color.colorToHSV(base.toArgb(), hsv)
     val level = count.coerceIn(1, 9)
-    hsv[0] = (hsv[0] + ((level - 5) * 3f) + 360f) % 360f
-    hsv[1] = (0.34f + level * 0.065f).coerceAtMost(0.94f)
-    hsv[2] = (0.98f - level * 0.025f).coerceAtLeast(0.72f)
+    val progress = (level - 1) / 8f
+    hsv[0] = (hsv[0] + (progress * 54f) + 360f) % 360f
+    hsv[1] = (0.18f + progress * 0.66f).coerceIn(0.18f, 0.84f)
+    hsv[2] = (0.99f - progress * 0.21f).coerceIn(0.78f, 0.99f)
     return Color(android.graphics.Color.HSVToColor(hsv))
 }

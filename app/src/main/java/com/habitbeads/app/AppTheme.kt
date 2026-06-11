@@ -14,22 +14,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 enum class AppThemeChoice(val label: String) {
-    Warm("Warm"),
-    Ocean("Ocean"),
-    Forest("Forest"),
-    Grape("Grape")
+    Warm("Linen"),
+    Ocean("Mist"),
+    Forest("Sage"),
+    Grape("Dusk")
 }
 
 private val WarmColorScheme = lightColorScheme(
-    primary = Color(0xFF277DA1),
+    primary = Color(0xFF4F7E8A),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD9EEF6),
-    onPrimaryContainer = Color(0xFF12343F),
-    secondary = Color(0xFF2A9D8F),
+    primaryContainer = Color(0xFFDCECEF),
+    onPrimaryContainer = Color(0xFF19363D),
+    secondary = Color(0xFF6D8F7E),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDDF4EE),
-    onSecondaryContainer = Color(0xFF123B35),
-    tertiary = Color(0xFFB56576),
+    secondaryContainer = Color(0xFFE3EEE8),
+    onSecondaryContainer = Color(0xFF25382F),
+    tertiary = Color(0xFFB08A68),
     onTertiary = Color.White,
     background = Color(0xFFFFFBF6),
     onBackground = Color(0xFF241F1B),
@@ -41,18 +41,18 @@ private val WarmColorScheme = lightColorScheme(
 )
 
 private val OceanColorScheme = lightColorScheme(
-    primary = Color(0xFF176B87),
+    primary = Color(0xFF4E7F92),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD4F1F4),
-    onPrimaryContainer = Color(0xFF082F3A),
-    secondary = Color(0xFF2C7DA0),
+    primaryContainer = Color(0xFFDCECEF),
+    onPrimaryContainer = Color(0xFF193742),
+    secondary = Color(0xFF738AA0),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE0F4FF),
-    onSecondaryContainer = Color(0xFF16384A),
-    tertiary = Color(0xFF61A5C2),
-    background = Color(0xFFF7FCFF),
+    secondaryContainer = Color(0xFFE6EEF4),
+    onSecondaryContainer = Color(0xFF283645),
+    tertiary = Color(0xFF85A6B8),
+    background = Color(0xFFF8FBFC),
     onBackground = Color(0xFF172126),
-    surface = Color(0xFFF7FCFF),
+    surface = Color(0xFFF8FBFC),
     onSurface = Color(0xFF172126),
     surfaceVariant = Color(0xFFE7F0F4),
     onSurfaceVariant = Color(0xFF45545B),
@@ -60,18 +60,18 @@ private val OceanColorScheme = lightColorScheme(
 )
 
 private val ForestColorScheme = lightColorScheme(
-    primary = Color(0xFF386641),
+    primary = Color(0xFF5E7D5B),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDDEAD7),
-    onPrimaryContainer = Color(0xFF1B331F),
-    secondary = Color(0xFF6A994E),
+    primaryContainer = Color(0xFFE1EBDE),
+    onPrimaryContainer = Color(0xFF253421),
+    secondary = Color(0xFF7F8F66),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEAF4E4),
-    onSecondaryContainer = Color(0xFF273B1C),
-    tertiary = Color(0xFFA7C957),
-    background = Color(0xFFFFFDF6),
+    secondaryContainer = Color(0xFFECEFDF),
+    onSecondaryContainer = Color(0xFF303823),
+    tertiary = Color(0xFFA3A77A),
+    background = Color(0xFFFCFCF7),
     onBackground = Color(0xFF202217),
-    surface = Color(0xFFFFFDF6),
+    surface = Color(0xFFFCFCF7),
     onSurface = Color(0xFF202217),
     surfaceVariant = Color(0xFFEEEBDD),
     onSurfaceVariant = Color(0xFF555244),
@@ -79,18 +79,18 @@ private val ForestColorScheme = lightColorScheme(
 )
 
 private val GrapeColorScheme = lightColorScheme(
-    primary = Color(0xFF6D597A),
+    primary = Color(0xFF756A86),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFEDE3F2),
-    onPrimaryContainer = Color(0xFF33283A),
-    secondary = Color(0xFFB56576),
+    primaryContainer = Color(0xFFEAE5F0),
+    onPrimaryContainer = Color(0xFF302A3B),
+    secondary = Color(0xFF927384),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFF8E2E7),
-    onSecondaryContainer = Color(0xFF4A2830),
-    tertiary = Color(0xFFE56B6F),
-    background = Color(0xFFFFFAFC),
+    secondaryContainer = Color(0xFFF0E6EC),
+    onSecondaryContainer = Color(0xFF3D2D37),
+    tertiary = Color(0xFFA98D9D),
+    background = Color(0xFFFCFAFD),
     onBackground = Color(0xFF251F24),
-    surface = Color(0xFFFFFAFC),
+    surface = Color(0xFFFCFAFD),
     onSurface = Color(0xFF251F24),
     surfaceVariant = Color(0xFFF2E7EC),
     onSurfaceVariant = Color(0xFF594D54),
@@ -105,6 +105,7 @@ fun HabitBeadsApp() {
             AppThemeChoice.values().firstOrNull { it.name == loadSavedThemeName(context) } ?: AppThemeChoice.Warm
         )
     }
+    var showBeadNumbers by remember { mutableStateOf(loadShowBeadNumbers(context)) }
 
     val scheme = when (themeChoice) {
         AppThemeChoice.Warm -> WarmColorScheme
@@ -120,6 +121,11 @@ fun HabitBeadsApp() {
                 onThemeChoiceChange = { choice ->
                     themeChoice = choice
                     saveThemeName(context, choice.name)
+                },
+                showBeadNumbers = showBeadNumbers,
+                onShowBeadNumbersChange = { showNumbers ->
+                    showBeadNumbers = showNumbers
+                    saveShowBeadNumbers(context, showNumbers)
                 }
             )
         }
