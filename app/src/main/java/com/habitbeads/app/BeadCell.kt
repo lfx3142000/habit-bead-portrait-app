@@ -18,19 +18,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun DayHeader(day: DayInfo) {
+fun DayHeader(day: DayInfo, cellSize: Dp = CellSize) {
     Column(
         modifier = Modifier
-            .width(CellSize)
-            .size(width = CellSize, height = 44.dp)
+            .width(cellSize)
+            .size(width = cellSize, height = 44.dp)
             .semantics {
                 contentDescription = if (day.isToday) {
                     "Today, ${day.dayLabel} ${day.dateLabel}"
@@ -63,14 +65,16 @@ fun BeadCell(
     count: Int,
     color: Color,
     isToday: Boolean,
+    cellSize: Dp = CellSize,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit
 ) {
+    val beadColor = if (count > 0) beadHueForCount(color, count) else Color(0xFFF0F3F8)
     val beadModifier = Modifier
-        .size(CellSize)
+        .size(cellSize)
         .padding(6.dp)
         .clip(CircleShape)
-        .background(if (count > 0) color else Color(0xFFF0F3F8))
+        .background(beadColor)
         .then(
             if (count == 0 && isToday) {
                 Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
@@ -84,14 +88,15 @@ fun BeadCell(
         }
         .combinedClickable(onClick = onIncrement, onLongClick = onDecrement)
 
-    Box(modifier = beadModifier, contentAlignment = Alignment.Center) {
-        if (count > 0) {
-            Text(
-                count.toString(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-    }
+    Box(modifier = beadModifier, contentAlignment = Alignment.Center)
+}
+
+private fun beadHueForCount(base: Color, count: Int): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(base.toArgb(), hsv)
+    val level = count.coerceIn(1, 9)
+    hsv[0] = (hsv[0] + ((level - 5) * 3f) + 360f) % 360f
+    hsv[1] = (0.34f + level * 0.065f).coerceAtMost(0.94f)
+    hsv[2] = (0.98f - level * 0.025f).coerceAtLeast(0.72f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
 }

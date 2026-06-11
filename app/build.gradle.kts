@@ -5,6 +5,9 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+val ciBuildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1000
+val portraitVersionCode = 1000 + ciBuildNumber
+
 android {
     namespace = "com.habitbeads.app"
     compileSdk = 35
@@ -13,8 +16,17 @@ android {
         applicationId = "com.habitbeads.portrait"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-portrait"
+        versionCode = portraitVersionCode
+        versionName = "0.1.0-portrait.$portraitVersionCode"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug/habitbeads-portrait-debug.keystore")
+            storePassword = "habitbeads"
+            keyAlias = "habitbeads-portrait-debug"
+            keyPassword = "habitbeads"
+        }
     }
 
     compileOptions {

@@ -114,9 +114,9 @@ fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThe
             .background(PortraitBackground)
     ) {
         val isLandscape = maxWidth > maxHeight
-        val horizontalPadding = if (isLandscape) 24.dp else 16.dp
+        val horizontalPadding = if (isLandscape) 12.dp else 16.dp
         val topPadding = if (isLandscape) 18.dp else 72.dp
-        val contentMaxWidth = if (isLandscape) 760.dp else maxWidth
+        val contentMaxWidth = maxWidth
 
         Column(
             modifier = Modifier
@@ -140,6 +140,7 @@ fun HabitTrackerScreen(themeChoice: AppThemeChoice, onThemeChoiceChange: (AppThe
                     habits = habits,
                     days = days,
                     counts = counts,
+                    isLandscape = isLandscape,
                     horizontalScrollState = horizontalScrollState,
                     onEditHabit = { habitToEdit = it },
                     onMoveHabit = ::moveHabit,
@@ -297,12 +298,16 @@ private fun PortraitTrackerCard(
     habits: List<Habit>,
     days: List<DayInfo>,
     counts: Map<String, Int>,
+    isLandscape: Boolean,
     horizontalScrollState: androidx.compose.foundation.ScrollState,
     onEditHabit: (Habit) -> Unit,
     onMoveHabit: (Int, Int) -> Unit,
     onIncrement: (Habit, DayInfo, Int) -> Unit,
     onDecrement: (Habit, DayInfo, Int) -> Unit
 ) {
+    val gridCellSize = if (isLandscape) 46.dp else CellSize
+    val habitColumnWidth = if (isLandscape) 140.dp else HabitColumnWidth
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -314,7 +319,7 @@ private fun PortraitTrackerCard(
         Row {
             Column(
                 modifier = Modifier
-                    .width(HabitColumnWidth)
+                    .width(habitColumnWidth)
                     .border(width = 0.5.dp, color = GridLine)
             ) {
                 Spacer(modifier = Modifier.height(44.dp))
@@ -323,6 +328,7 @@ private fun PortraitTrackerCard(
                         habit = habit,
                         canMoveUp = index > 0,
                         canMoveDown = index < habits.lastIndex,
+                        rowHeight = gridCellSize,
                         onEdit = { onEditHabit(habit) },
                         onMoveUp = { onMoveHabit(index, index - 1) },
                         onMoveDown = { onMoveHabit(index, index + 1) }
@@ -334,10 +340,10 @@ private fun PortraitTrackerCard(
                 days.forEach { day ->
                     Column(
                         modifier = Modifier
-                            .width(CellSize)
+                            .width(gridCellSize)
                             .background(if (day.isToday) TodayHighlight else Color.Transparent)
                     ) {
-                        DayHeader(day)
+                        DayHeader(day, cellSize = gridCellSize)
                         habits.forEach { habit ->
                             val key = "${habit.id}:${day.dateKey}"
                             val count = counts[key] ?: 0
@@ -347,6 +353,7 @@ private fun PortraitTrackerCard(
                                 count = count,
                                 color = habit.color,
                                 isToday = day.isToday,
+                                cellSize = gridCellSize,
                                 onIncrement = { onIncrement(habit, day, count) },
                                 onDecrement = { onDecrement(habit, day, count) }
                             )

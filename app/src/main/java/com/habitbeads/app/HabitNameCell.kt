@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -42,6 +43,7 @@ fun HabitNameCell(
     habit: Habit,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
+    rowHeight: Dp = CellSize,
     onEdit: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit
@@ -51,7 +53,7 @@ fun HabitNameCell(
 
     Row(
         modifier = Modifier
-            .height(CellSize)
+            .height(rowHeight)
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .semantics {
