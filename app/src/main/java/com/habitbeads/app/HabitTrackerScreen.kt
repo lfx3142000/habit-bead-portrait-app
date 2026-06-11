@@ -3,6 +3,8 @@ package com.habitbeads.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -12,12 +14,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -78,6 +80,8 @@ fun HabitTrackerScreen(
     val counts = remember { mutableStateMapOf<String, Int>() }
     val days = remember { recentDays() }
     val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+    val habitColorOptions = remember(themeChoice) { habitColorsForTheme(themeChoice) }
 
     suspend fun reloadFromRoom() {
         habits.clear()
@@ -93,14 +97,20 @@ fun HabitTrackerScreen(
         if (fromIndex !in habits.indices || toIndex !in habits.indices) return
         val habit = habits.removeAt(fromIndex)
         habits.add(toIndex, habit)
-        scope.launch { repository.saveHabitOrder(habits.toList()) }
+        scope.launch {
+            repository.saveHabitOrder(habits.toList())
+            HabitWidgetUpdater.updateAll(context)
+        }
     }
 
     fun deleteHabit(habit: Habit) {
         habits.removeAll { it.id == habit.id }
         val prefix = "${habit.id}:"
         counts.keys.filter { it.startsWith(prefix) }.forEach { counts.remove(it) }
-        scope.launch { repository.archiveHabit(habit.id) }
+        scope.launch {
+            repository.archiveHabit(habit.id)
+            HabitWidgetUpdater.updateAll(context)
+        }
     }
 
     fun resetAllData() {
@@ -108,6 +118,7 @@ fun HabitTrackerScreen(
             isLoaded = false
             repository.resetToDefaults()
             reloadFromRoom()
+            HabitWidgetUpdater.updateAll(context)
         }
     }
 
@@ -154,19 +165,26 @@ fun HabitTrackerScreen(
                     isLandscape = isLandscape,
                     showBeadNumbers = showBeadNumbers,
                     horizontalScrollState = horizontalScrollState,
+                    verticalScrollState = verticalScrollState,
                     onEditHabit = { habitToEdit = it },
                     onMoveHabit = ::moveHabit,
                     onIncrement = { habit, day, count ->
                         val key = "${habit.id}:${day.dateKey}"
                         val next = (count + 1).coerceAtMost(9)
                         counts[key] = next
-                        scope.launch { repository.saveCount(habit.id, day.dateKey, next) }
+                        scope.launch {
+                            repository.saveCount(habit.id, day.dateKey, next)
+                            HabitWidgetUpdater.updateAll(context)
+                        }
                     },
                     onDecrement = { habit, day, count ->
                         val key = "${habit.id}:${day.dateKey}"
                         val next = (count - 1).coerceAtLeast(0)
                         if (next == 0) counts.remove(key) else counts[key] = next
-                        scope.launch { repository.saveCount(habit.id, day.dateKey, next) }
+                        scope.launch {
+                            repository.saveCount(habit.id, day.dateKey, next)
+                            HabitWidgetUpdater.updateAll(context)
+                        }
                     }
                 )
             }
@@ -185,6 +203,7 @@ fun HabitTrackerScreen(
         HabitEditorDialog(
             title = "Add habit",
             initialHabit = null,
+            colorOptions = habitColorOptions,
             confirmText = "Add",
             onDismiss = { showAddDialog = false },
             onConfirm = { name, subtitle, color ->
@@ -193,6 +212,7 @@ fun HabitTrackerScreen(
                     scope.launch {
                         val added = repository.addHabit(trimmed, subtitle.trim(), color, habits.size)
                         habits.add(added)
+                        HabitWidgetUpdater.updateAll(context)
                     }
                 }
                 showAddDialog = false
@@ -205,6 +225,7 @@ fun HabitTrackerScreen(
         HabitEditorDialog(
             title = "Edit habit",
             initialHabit = habit,
+            colorOptions = habitColorOptions,
             confirmText = "Save",
             onDismiss = { habitToEdit = null },
             onConfirm = { name, subtitle, color ->
@@ -214,7 +235,10 @@ fun HabitTrackerScreen(
                     if (index >= 0) {
                         val updated = habit.copy(name = trimmed, subtitle = subtitle.trim(), color = color)
                         habits[index] = updated
-                        scope.launch { repository.updateHabit(updated, index) }
+                        scope.launch {
+                            repository.updateHabit(updated, index)
+                            HabitWidgetUpdater.updateAll(context)
+                        }
                     }
                 }
                 habitToEdit = null
@@ -319,6 +343,7 @@ private fun PortraitTrackerCard(
     isLandscape: Boolean,
     showBeadNumbers: Boolean,
     horizontalScrollState: androidx.compose.foundation.ScrollState,
+    verticalScrollState: androidx.compose.foundation.ScrollState,
     onEditHabit: (Habit) -> Unit,
     onMoveHabit: (Int, Int) -> Unit,
     onIncrement: (Habit, DayInfo, Int) -> Unit,
@@ -342,57 +367,89 @@ private fun PortraitTrackerCard(
                 isLandscape -> MinLandscapeCellSize
                 else -> CellSize
             }
-            val gridModifier = if (fitsLandscape) Modifier.fillMaxWidth() else Modifier.horizontalScroll(horizontalScrollState)
+            val gridModifier = if (fitsLandscape) Modifier.width(availableGridWidth) else Modifier.horizontalScroll(horizontalScrollState)
+            val tableBodyMaxHeight = if (isLandscape) 216.dp else 386.dp
 
-            Row {
-                Column(
-                    modifier = Modifier
-                        .width(habitColumnWidth)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
-                ) {
-                    Spacer(modifier = Modifier.height(44.dp))
-                    habits.forEachIndexed { index, habit ->
-                        HabitNameCell(
-                            habit = habit,
-                            canMoveUp = index > 0,
-                            canMoveDown = index < habits.lastIndex,
-                            rowHeight = gridCellSize,
-                            onEdit = { onEditHabit(habit) },
-                            onMoveUp = { onMoveHabit(index, index - 1) },
-                            onMoveDown = { onMoveHabit(index, index + 1) }
-                        )
+            Column(modifier = Modifier.heightIn(max = if (isLandscape) 260.dp else 430.dp)) {
+                Row {
+                    Box(
+                        modifier = Modifier
+                            .width(habitColumnWidth)
+                            .height(44.dp)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+                    )
+                    Row(modifier = gridModifier) {
+                        days.forEach { day ->
+                            Box(
+                                modifier = Modifier
+                                    .width(gridCellSize)
+                                    .background(
+                                        if (day.isToday) {
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surface
+                                        }
+                                    )
+                            ) {
+                                DayHeader(day, cellSize = gridCellSize)
+                            }
+                        }
                     }
                 }
 
-                Row(modifier = gridModifier) {
-                    days.forEach { day ->
-                        Column(
-                            modifier = Modifier
-                                .width(gridCellSize)
-                                .background(
-                                    if (day.isToday) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
-                                    } else {
-                                        MaterialTheme.colorScheme.surface
-                                    }
-                                )
-                        ) {
-                            DayHeader(day, cellSize = gridCellSize)
-                            habits.forEach { habit ->
-                                val key = "${habit.id}:${day.dateKey}"
-                                val count = counts[key] ?: 0
-                                BeadCell(
-                                    habitName = habit.name,
-                                    day = day,
-                                    count = count,
-                                    color = habit.color,
-                                    isToday = day.isToday,
-                                    showNumber = showBeadNumbers,
-                                    cellSize = gridCellSize,
-                                    onIncrement = { onIncrement(habit, day, count) },
-                                    onDecrement = { onDecrement(habit, day, count) }
-                                )
+                Row(
+                    modifier = Modifier
+                        .heightIn(max = tableBodyMaxHeight)
+                        .verticalScroll(verticalScrollState)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .width(habitColumnWidth)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+                    ) {
+                        habits.forEachIndexed { index, habit ->
+                            HabitNameCell(
+                                habit = habit,
+                                canMoveUp = index > 0,
+                                canMoveDown = index < habits.lastIndex,
+                                rowHeight = gridCellSize,
+                                onEdit = { onEditHabit(habit) },
+                                onMoveUp = { onMoveHabit(index, index - 1) },
+                                onMoveDown = { onMoveHabit(index, index + 1) }
+                            )
+                        }
+                    }
+
+                    Row(modifier = gridModifier) {
+                        days.forEach { day ->
+                            Column(
+                                modifier = Modifier
+                                    .width(gridCellSize)
+                                    .background(
+                                        if (day.isToday) {
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surface
+                                        }
+                                    )
+                            ) {
+                                habits.forEach { habit ->
+                                    val key = "${habit.id}:${day.dateKey}"
+                                    val count = counts[key] ?: 0
+                                    BeadCell(
+                                        habitName = habit.name,
+                                        day = day,
+                                        count = count,
+                                        color = habit.color,
+                                        isToday = day.isToday,
+                                        showNumber = showBeadNumbers,
+                                        cellSize = gridCellSize,
+                                        onIncrement = { onIncrement(habit, day, count) },
+                                        onDecrement = { onDecrement(habit, day, count) }
+                                    )
+                                }
                             }
                         }
                     }

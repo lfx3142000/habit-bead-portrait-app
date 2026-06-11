@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 fun HabitEditorDialog(
     title: String,
     initialHabit: Habit?,
+    colorOptions: List<Color> = habitColors,
     confirmText: String,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Color) -> Unit,
@@ -41,7 +42,9 @@ fun HabitEditorDialog(
 ) {
     var habitName by remember { mutableStateOf(initialHabit?.name ?: "") }
     var habitSubtitle by remember { mutableStateOf(initialHabit?.subtitle ?: "") }
-    var colorIndex by remember { mutableIntStateOf(habitColors.indexOf(initialHabit?.color).takeIf { it >= 0 } ?: 0) }
+    var colorIndex by remember {
+        mutableIntStateOf(colorOptions.indexOf(initialHabit?.color).takeIf { it >= 0 } ?: 0)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -62,7 +65,7 @@ fun HabitEditorDialog(
                 )
                 Text("Color", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    habitColors.forEachIndexed { index, color ->
+                    colorOptions.forEachIndexed { index, color ->
                         val borderColor = if (index == colorIndex) MaterialTheme.colorScheme.onSurface else color
                         Box(
                             modifier = Modifier
@@ -82,7 +85,7 @@ fun HabitEditorDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(habitName, habitSubtitle, habitColors[colorIndex]) }) { Text(confirmText) } },
+        confirmButton = { TextButton(onClick = { onConfirm(habitName, habitSubtitle, colorOptions[colorIndex]) }) { Text(confirmText) } },
         dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
