@@ -3,13 +3,13 @@
 ## Monetization
 
 - Free tier: up to 5 habits.
-- Premium tier: one-time in-app product unlocks unlimited habits and custom color pickers.
+- Premium tier: one-time in-app product unlocks unlimited habits and custom bead color pickers.
 - Product ID to create in Play Console: `premium_unlock`.
 - No subscriptions.
 - No ads.
 - No cloud backup or account system.
 
-Google Play Billing is required for the one-time unlock because it sells digital app functionality. The app currently has the free-tier gate and premium messaging in place; the purchase flow should be wired after `premium_unlock` exists in Play Console.
+Google Play Billing is required for the one-time unlock because it sells digital app functionality. The app currently has the free-tier gate, premium messaging, and premium-gated custom bead color picker UI in place; the purchase flow should be wired after `premium_unlock` exists in Play Console.
 
 ## Release Artifacts
 

@@ -20,45 +20,18 @@ enum class AppThemeChoice(val label: String) {
     Grape("Dusk")
 }
 
+private val LinenHabitColors = listOf(
+    Color(0xFFB76E5F),
+    Color(0xFFC2945F),
+    Color(0xFF6F9A8D),
+    Color(0xFF4F7E8A),
+    Color(0xFF8C7A99),
+    Color(0xFFAA7A88),
+    Color(0xFF8D9568)
+)
+
 fun habitColorsForTheme(choice: AppThemeChoice): List<Color> {
-    return when (choice) {
-        AppThemeChoice.Warm -> listOf(
-            Color(0xFFB76E5F),
-            Color(0xFFC2945F),
-            Color(0xFF6F9A8D),
-            Color(0xFF4F7E8A),
-            Color(0xFF8C7A99),
-            Color(0xFFAA7A88),
-            Color(0xFF8D9568)
-        )
-        AppThemeChoice.Ocean -> listOf(
-            Color(0xFF4E7F92),
-            Color(0xFF5C91A6),
-            Color(0xFF738AA0),
-            Color(0xFF6D9CA0),
-            Color(0xFF7B8DB8),
-            Color(0xFF8BA6B8),
-            Color(0xFF6C8E96)
-        )
-        AppThemeChoice.Forest -> listOf(
-            Color(0xFF5E7D5B),
-            Color(0xFF7F8F66),
-            Color(0xFF8FA36A),
-            Color(0xFF6D8F7E),
-            Color(0xFFA3A77A),
-            Color(0xFF9A8468),
-            Color(0xFF78906E)
-        )
-        AppThemeChoice.Grape -> listOf(
-            Color(0xFF756A86),
-            Color(0xFF927384),
-            Color(0xFFA98D9D),
-            Color(0xFF7E8BA8),
-            Color(0xFF9A7DA5),
-            Color(0xFFAA7E8D),
-            Color(0xFF847A9B)
-        )
-    }
+    return LinenHabitColors
 }
 
 private val WarmColorScheme = lightColorScheme(

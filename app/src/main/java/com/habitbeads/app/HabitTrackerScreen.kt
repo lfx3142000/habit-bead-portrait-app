@@ -213,6 +213,7 @@ fun HabitTrackerScreen(
             title = "Add habit",
             initialHabit = null,
             colorOptions = habitColorOptions,
+            premiumUnlocked = premiumUnlocked,
             confirmText = "Add",
             onDismiss = { showAddDialog = false },
             onConfirm = { name, subtitle, color ->
@@ -226,6 +227,10 @@ fun HabitTrackerScreen(
                 }
                 showAddDialog = false
             },
+            onPremiumRequested = {
+                showAddDialog = false
+                showPremiumDialog = true
+            },
             onRequestDelete = null
         )
     }
@@ -235,6 +240,7 @@ fun HabitTrackerScreen(
             title = "Edit habit",
             initialHabit = habit,
             colorOptions = habitColorOptions,
+            premiumUnlocked = premiumUnlocked,
             confirmText = "Save",
             onDismiss = { habitToEdit = null },
             onConfirm = { name, subtitle, color ->
@@ -251,6 +257,10 @@ fun HabitTrackerScreen(
                     }
                 }
                 habitToEdit = null
+            },
+            onPremiumRequested = {
+                habitToEdit = null
+                showPremiumDialog = true
             },
             onRequestDelete = {
                 habitToEdit = null
