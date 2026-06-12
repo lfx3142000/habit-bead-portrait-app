@@ -8,13 +8,11 @@
     android:paddingTop="2dp"
     android:paddingBottom="2dp">
 
-    <TextView
+    <ImageView
         android:id="@+id/widget_row_bead"
         android:layout_width="18dp"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text=""
-        android:textSize="15sp" />
+        android:layout_height="18dp"
+        android:contentDescription="@string/widget_bead_description" />
 
     <TextView
         android:id="@+id/widget_row_name"
@@ -27,9 +25,17 @@
 
     <TextView
         android:id="@+id/widget_row_value"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="76dp"
+        android:layout_height="24dp"
+        android:gravity="end|center_vertical"
         android:paddingStart="8dp"
         android:textSize="13sp"
         android:textStyle="bold" />
+
+    <ImageView
+        android:id="@+id/widget_row_strip"
+        android:layout_width="96dp"
+        android:layout_height="22dp"
+        android:contentDescription="@string/widget_weekly_strip_description"
+        android:visibility="gone" />
 </LinearLayout>

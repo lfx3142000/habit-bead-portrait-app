@@ -3,4 +3,6 @@
     <string name="widget_today_description">Today Habit Beads widget</string>
     <string name="widget_single_description">Single Habit Beads widget</string>
     <string name="widget_weekly_description">Weekly Habit Beads strip widget</string>
+    <string name="widget_bead_description">Habit bead</string>
+    <string name="widget_weekly_strip_description">Weekly bead strip</string>
 </resources>

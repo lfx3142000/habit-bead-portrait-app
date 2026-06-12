@@ -8,6 +8,11 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.RectF
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -264,7 +269,8 @@ private data class WidgetPalette(
     val background: Int,
     val text: Int,
     val mutedText: Int,
-    val rule: Int
+    val rule: Int,
+    val accent: Int
 )
 
 private data class WidgetData(
@@ -340,6 +346,7 @@ private fun baseWidget(context: Context, title: String, subtitle: String, palett
     val opacity = WidgetConfigStore.loadOpacity(context, widgetId)
     return RemoteViews(context.packageName, R.layout.widget_habit_beads).apply {
         removeAllViews(R.id.widget_body)
+        setImageViewBitmap(R.id.widget_header_icon, beadBitmap(palette.accent, 1, sizePx = 48))
         setTextViewText(R.id.widget_title, title)
         setTextViewText(R.id.widget_subtitle, subtitle)
         setTextColor(R.id.widget_title, palette.text)
@@ -360,8 +367,9 @@ private fun addHabitRow(
 ) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
         setViewVisibility(R.id.widget_row_bead, View.VISIBLE)
-        setTextViewText(R.id.widget_row_bead, if (count > 0) "\u25CF" else "\u25CB")
-        setTextColor(R.id.widget_row_bead, if (count > 0) habit.color.toArgb() else palette.mutedText)
+        setViewVisibility(R.id.widget_row_strip, View.GONE)
+        setViewVisibility(R.id.widget_row_value, View.VISIBLE)
+        setImageViewBitmap(R.id.widget_row_bead, beadBitmap(habit.color.toArgb(), count, sizePx = 42))
         setTextViewText(R.id.widget_row_name, habit.name)
         setTextViewText(R.id.widget_row_value, count.takeIf { it > 0 }?.toString() ?: "")
         setTextColor(R.id.widget_row_name, palette.text)
@@ -376,12 +384,12 @@ private fun addHabitRow(
 private fun addWeeklyRow(context: Context, parent: RemoteViews, name: String, beads: String, beadColor: Int, palette: WidgetPalette) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
         setViewVisibility(R.id.widget_row_bead, View.VISIBLE)
-        setTextViewText(R.id.widget_row_bead, "\u25CF")
-        setTextColor(R.id.widget_row_bead, beadColor)
+        setViewVisibility(R.id.widget_row_value, View.GONE)
+        setViewVisibility(R.id.widget_row_strip, View.VISIBLE)
+        setImageViewBitmap(R.id.widget_row_bead, beadBitmap(beadColor, 1, sizePx = 42))
         setTextViewText(R.id.widget_row_name, name)
-        setTextViewText(R.id.widget_row_value, beads)
+        setImageViewBitmap(R.id.widget_row_strip, weeklyStripBitmap(beadColor, beads))
         setTextColor(R.id.widget_row_name, palette.text)
-        setTextColor(R.id.widget_row_value, beadColor)
         setOnClickPendingIntent(R.id.widget_row_root, openAppIntent(context))
     }
     parent.addView(R.id.widget_body, row)
@@ -390,6 +398,8 @@ private fun addWeeklyRow(context: Context, parent: RemoteViews, name: String, be
 private fun addMessageRow(context: Context, parent: RemoteViews, message: String, palette: WidgetPalette) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
         setViewVisibility(R.id.widget_row_bead, View.GONE)
+        setViewVisibility(R.id.widget_row_strip, View.GONE)
+        setViewVisibility(R.id.widget_row_value, View.GONE)
         setTextViewText(R.id.widget_row_name, message)
         setTextViewText(R.id.widget_row_value, "")
         setTextColor(R.id.widget_row_name, palette.mutedText)
@@ -431,11 +441,85 @@ private fun todayKey(): String {
 
 private fun widgetPalette(choice: AppThemeChoice): WidgetPalette {
     return when (choice) {
-        AppThemeChoice.Warm -> WidgetPalette(0xFFFFF4E8.toInt(), 0xFF241F1B.toInt(), 0xFF665A50.toInt(), 0xFFE8D8C6.toInt())
-        AppThemeChoice.Ocean -> WidgetPalette(0xFFEFF8FA.toInt(), 0xFF172126.toInt(), 0xFF52656D.toInt(), 0xFFD6E7EC.toInt())
-        AppThemeChoice.Forest -> WidgetPalette(0xFFF2F7EA.toInt(), 0xFF202217.toInt(), 0xFF59614B.toInt(), 0xFFDDE7D2.toInt())
-        AppThemeChoice.Grape -> WidgetPalette(0xFFF7F0FA.toInt(), 0xFF251F24.toInt(), 0xFF655A68.toInt(), 0xFFE5D8EA.toInt())
+        AppThemeChoice.Warm -> WidgetPalette(0xFFFFF4E8.toInt(), 0xFF241F1B.toInt(), 0xFF665A50.toInt(), 0xFFE8D8C6.toInt(), 0xFF4F7E8A.toInt())
+        AppThemeChoice.Ocean -> WidgetPalette(0xFFEFF8FA.toInt(), 0xFF172126.toInt(), 0xFF52656D.toInt(), 0xFFD6E7EC.toInt(), 0xFF4E7F92.toInt())
+        AppThemeChoice.Forest -> WidgetPalette(0xFFF2F7EA.toInt(), 0xFF202217.toInt(), 0xFF59614B.toInt(), 0xFFDDE7D2.toInt(), 0xFF5E7D5B.toInt())
+        AppThemeChoice.Grape -> WidgetPalette(0xFFF7F0FA.toInt(), 0xFF251F24.toInt(), 0xFF655A68.toInt(), 0xFFE5D8EA.toInt(), 0xFF756A86.toInt())
     }
+}
+
+private fun beadBitmap(baseArgb: Int, count: Int, sizePx: Int): Bitmap {
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val inset = sizePx * 0.12f
+    val radius = (sizePx / 2f) - inset
+    val center = sizePx / 2f
+
+    if (count <= 0) {
+        paint.style = Paint.Style.FILL
+        paint.color = 0xFFF0F3F8.toInt()
+        canvas.drawCircle(center, center, radius, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = sizePx * 0.08f
+        paint.color = 0xFFBFC7D4.toInt()
+        canvas.drawCircle(center, center, radius - paint.strokeWidth / 2f, paint)
+        return bitmap
+    }
+
+    paint.style = Paint.Style.FILL
+    paint.color = widgetBeadColor(baseArgb, count)
+    canvas.drawCircle(center, center, radius, paint)
+    paint.color = 0x44FFFFFF
+    canvas.drawOval(
+        RectF(sizePx * 0.25f, sizePx * 0.18f, sizePx * 0.57f, sizePx * 0.42f),
+        paint
+    )
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = sizePx * 0.04f
+    paint.color = 0x22000000
+    canvas.drawCircle(center, center, radius - paint.strokeWidth / 2f, paint)
+    return bitmap
+}
+
+private fun weeklyStripBitmap(baseArgb: Int, beads: String): Bitmap {
+    val width = 168
+    val height = 38
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val entries = beads.split(" ").filter { it.isNotBlank() }.take(7)
+    val radius = 8.5f
+    val gap = (width - radius * 2f * 7f) / 8f
+    entries.forEachIndexed { index, marker ->
+        val cx = gap + radius + index * (radius * 2f + gap)
+        val cy = height / 2f
+        if (marker == "\u25CF") {
+            paint.style = Paint.Style.FILL
+            paint.color = widgetBeadColor(baseArgb, index + 1)
+            canvas.drawCircle(cx, cy, radius, paint)
+        } else {
+            paint.style = Paint.Style.FILL
+            paint.color = 0xFFF0F3F8.toInt()
+            canvas.drawCircle(cx, cy, radius, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 2f
+            paint.color = 0xFFBFC7D4.toInt()
+            canvas.drawCircle(cx, cy, radius - 1f, paint)
+        }
+    }
+    return bitmap
+}
+
+private fun widgetBeadColor(baseArgb: Int, count: Int): Int {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(baseArgb, hsv)
+    val level = count.coerceIn(1, 9)
+    val progress = (level - 1) / 8f
+    hsv[0] = (hsv[0] + (progress * 54f) + 360f) % 360f
+    hsv[1] = (0.18f + progress * 0.66f).coerceIn(0.18f, 0.84f)
+    hsv[2] = (0.99f - progress * 0.21f).coerceIn(0.78f, 0.99f)
+    return AndroidColor.HSVToColor(hsv)
 }
 
 private object WidgetConfigStore {
