@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 
 private val AddButtonBlue = Color(0xFF3F6DDB)
 private val MinLandscapeCellSize = 54.dp
-private val LandscapeHabitColumnWidth = 188.dp
+private val LandscapeHabitColumnWidth = 220.dp
 
 @Composable
 fun HabitTrackerScreen(
@@ -129,7 +129,7 @@ fun HabitTrackerScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         val isLandscape = maxWidth > maxHeight
-        val horizontalPadding = if (isLandscape) 12.dp else 16.dp
+        val horizontalPadding = if (isLandscape) 36.dp else 16.dp
         val topPadding = if (isLandscape) 18.dp else 72.dp
         val contentMaxWidth = maxWidth
 
@@ -371,22 +371,48 @@ private fun PortraitTrackerCard(
                 isLandscape -> MinLandscapeCellSize
                 else -> CellSize
             }
-            val tableMaxHeight = if (isLandscape) 260.dp else 430.dp
+            val gridModifier = if (fitsLandscape) Modifier.width(availableGridWidth) else Modifier.horizontalScroll(horizontalScrollState)
+            val bodyMaxHeight = if (isLandscape) 216.dp else 386.dp
 
-            Box(
-                modifier = Modifier
-                    .heightIn(max = tableMaxHeight)
-                    .verticalScroll(verticalScrollState)
-                    .horizontalScroll(horizontalScrollState)
-            ) {
+            Column(modifier = Modifier.heightIn(max = if (isLandscape) 260.dp else 430.dp)) {
                 Row {
+                    Box(
+                        modifier = Modifier
+                            .width(habitColumnWidth)
+                            .height(44.dp)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+                    )
+                    Row(modifier = gridModifier) {
+                        days.forEach { day ->
+                            Box(
+                                modifier = Modifier
+                                    .width(gridCellSize)
+                                    .background(
+                                        if (day.isToday) {
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surface
+                                        }
+                                    )
+                            ) {
+                                DayHeader(day, cellSize = gridCellSize)
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .heightIn(max = bodyMaxHeight)
+                        .verticalScroll(verticalScrollState)
+                ) {
                     Column(
                         modifier = Modifier
                             .width(habitColumnWidth)
                             .background(MaterialTheme.colorScheme.surface)
                             .border(width = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
                     ) {
-                        Spacer(modifier = Modifier.height(44.dp))
                         habits.forEachIndexed { index, habit ->
                             HabitNameCell(
                                 habit = habit,
@@ -400,33 +426,34 @@ private fun PortraitTrackerCard(
                         }
                     }
 
-                    days.forEach { day ->
-                        Column(
-                            modifier = Modifier
-                                .width(gridCellSize)
-                                .background(
-                                    if (day.isToday) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
-                                    } else {
-                                        MaterialTheme.colorScheme.surface
-                                    }
-                                )
-                        ) {
-                            DayHeader(day, cellSize = gridCellSize)
-                            habits.forEach { habit ->
-                                val key = "${habit.id}:${day.dateKey}"
-                                val count = counts[key] ?: 0
-                                BeadCell(
-                                    habitName = habit.name,
-                                    day = day,
-                                    count = count,
-                                    color = habit.color,
-                                    isToday = day.isToday,
-                                    showNumber = showBeadNumbers,
-                                    cellSize = gridCellSize,
-                                    onIncrement = { onIncrement(habit, day, count) },
-                                    onDecrement = { onDecrement(habit, day, count) }
-                                )
+                    Row(modifier = gridModifier) {
+                        days.forEach { day ->
+                            Column(
+                                modifier = Modifier
+                                    .width(gridCellSize)
+                                    .background(
+                                        if (day.isToday) {
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surface
+                                        }
+                                    )
+                            ) {
+                                habits.forEach { habit ->
+                                    val key = "${habit.id}:${day.dateKey}"
+                                    val count = counts[key] ?: 0
+                                    BeadCell(
+                                        habitName = habit.name,
+                                        day = day,
+                                        count = count,
+                                        color = habit.color,
+                                        isToday = day.isToday,
+                                        showNumber = showBeadNumbers,
+                                        cellSize = gridCellSize,
+                                        onIncrement = { onIncrement(habit, day, count) },
+                                        onDecrement = { onDecrement(habit, day, count) }
+                                    )
+                                }
                             }
                         }
                     }

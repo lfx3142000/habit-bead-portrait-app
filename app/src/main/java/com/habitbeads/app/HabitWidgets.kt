@@ -13,6 +13,7 @@ import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
 import android.graphics.RectF
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -309,20 +310,25 @@ private fun buildTodayWidget(context: Context, data: WidgetData, widgetId: Int):
 private fun buildSingleHabitWidget(context: Context, data: WidgetData, widgetId: Int): RemoteViews {
     val selectedHabitId = WidgetConfigStore.loadHabitId(context, widgetId)
     val habit = data.habits.firstOrNull { it.id == selectedHabitId } ?: data.habits.firstOrNull()
-    val views = baseWidget(
-        context,
-        habit?.name ?: "Single Habit",
-        habit?.subtitle?.takeIf { it.isNotBlank() } ?: "Tap to add today's bead",
-        data.palette,
-        widgetId
-    )
-    if (habit == null) {
-        addMessageRow(context, views, "Open Habit Beads to add a habit", data.palette)
-    } else {
-        val count = data.counts["${habit.id}:${todayKey()}"] ?: 0
-        addHabitRow(context, views, habit, count, data.palette, allowQuickAdd = true)
+    val opacity = WidgetConfigStore.loadOpacity(context, widgetId)
+    return RemoteViews(context.packageName, R.layout.widget_single_habit).apply {
+        setInt(R.id.widget_single_root, "setBackgroundColor", withOpacity(data.palette.background, opacity))
+        setTextColor(R.id.widget_single_title, data.palette.text)
+        setTextColor(R.id.widget_single_subtitle, data.palette.mutedText)
+        if (habit == null) {
+            setTextViewText(R.id.widget_single_title, "Habit Beads")
+            setTextViewText(R.id.widget_single_subtitle, "Open app to add habits")
+            setImageViewBitmap(R.id.widget_single_bead, beadBitmap(data.palette.accent, 0, sizePx = 88))
+            setOnClickPendingIntent(R.id.widget_single_root, openAppIntent(context))
+        } else {
+            val count = data.counts["${habit.id}:${todayKey()}"] ?: 0
+            setTextViewText(R.id.widget_single_title, habit.name)
+            setTextViewText(R.id.widget_single_subtitle, count.takeIf { it > 0 }?.let { "$it beads today" } ?: "Tap bead to add")
+            setImageViewBitmap(R.id.widget_single_bead, beadBitmap(habit.color.toArgb(), count, sizePx = 88))
+            setOnClickPendingIntent(R.id.widget_single_root, openAppIntent(context))
+            setOnClickPendingIntent(R.id.widget_single_bead, addBeadIntent(context, habit.id))
+        }
     }
-    return views
 }
 
 private fun buildWeeklyStripWidget(context: Context, data: WidgetData, widgetId: Int): RemoteViews {
@@ -332,11 +338,10 @@ private fun buildWeeklyStripWidget(context: Context, data: WidgetData, widgetId:
         addMessageRow(context, views, "Open Habit Beads to add habits", data.palette)
     } else {
         habits.forEach { habit ->
-            val beadText = data.days.joinToString(" ") { day ->
-                val count = data.counts["${habit.id}:${day.dateKey}"] ?: 0
-                if (count > 0) "\u25CF" else "\u25CB"
+            val counts = data.days.map { day ->
+                data.counts["${habit.id}:${day.dateKey}"] ?: 0
             }
-            addWeeklyRow(context, views, habit.name, beadText, habit.color.toArgb(), data.palette)
+            addWeeklyRow(context, views, habit.name, counts, habit.color.toArgb(), data.palette)
         }
     }
     return views
@@ -381,14 +386,14 @@ private fun addHabitRow(
     parent.addView(R.id.widget_body, row)
 }
 
-private fun addWeeklyRow(context: Context, parent: RemoteViews, name: String, beads: String, beadColor: Int, palette: WidgetPalette) {
+private fun addWeeklyRow(context: Context, parent: RemoteViews, name: String, counts: List<Int>, beadColor: Int, palette: WidgetPalette) {
     val row = RemoteViews(context.packageName, R.layout.widget_habit_row).apply {
         setViewVisibility(R.id.widget_row_bead, View.VISIBLE)
         setViewVisibility(R.id.widget_row_value, View.GONE)
         setViewVisibility(R.id.widget_row_strip, View.VISIBLE)
         setImageViewBitmap(R.id.widget_row_bead, beadBitmap(beadColor, 1, sizePx = 42))
         setTextViewText(R.id.widget_row_name, name)
-        setImageViewBitmap(R.id.widget_row_strip, weeklyStripBitmap(beadColor, beads))
+        setImageViewBitmap(R.id.widget_row_strip, weeklyStripBitmap(beadColor, counts))
         setTextColor(R.id.widget_row_name, palette.text)
         setOnClickPendingIntent(R.id.widget_row_root, openAppIntent(context))
     }
@@ -420,6 +425,8 @@ private fun openAppIntent(context: Context): PendingIntent {
 private fun addBeadIntent(context: Context, habitId: Int): PendingIntent {
     val intent = Intent(context, HabitWidgetActionReceiver::class.java).apply {
         action = WidgetActionAdd
+        setPackage(context.packageName)
+        data = Uri.parse("habitbeads://widget/add/$habitId")
         putExtra(WidgetExtraHabitId, habitId)
     }
     return PendingIntent.getBroadcast(
@@ -482,21 +489,20 @@ private fun beadBitmap(baseArgb: Int, count: Int, sizePx: Int): Bitmap {
     return bitmap
 }
 
-private fun weeklyStripBitmap(baseArgb: Int, beads: String): Bitmap {
+private fun weeklyStripBitmap(baseArgb: Int, counts: List<Int>): Bitmap {
     val width = 168
     val height = 38
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    val entries = beads.split(" ").filter { it.isNotBlank() }.take(7)
     val radius = 8.5f
     val gap = (width - radius * 2f * 7f) / 8f
-    entries.forEachIndexed { index, marker ->
+    counts.take(7).forEachIndexed { index, count ->
         val cx = gap + radius + index * (radius * 2f + gap)
         val cy = height / 2f
-        if (marker == "\u25CF") {
+        if (count > 0) {
             paint.style = Paint.Style.FILL
-            paint.color = widgetBeadColor(baseArgb, index + 1)
+            paint.color = widgetBeadColor(baseArgb, count)
             canvas.drawCircle(cx, cy, radius, paint)
         } else {
             paint.style = Paint.Style.FILL
