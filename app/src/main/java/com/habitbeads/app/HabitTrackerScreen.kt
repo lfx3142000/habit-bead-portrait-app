@@ -1,6 +1,5 @@
 package com.habitbeads.app
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -272,9 +271,6 @@ fun HabitTrackerScreen(
             onThemeChoiceChange = onThemeChoiceChange,
             showBeadNumbers = showBeadNumbers,
             onShowBeadNumbersChange = onShowBeadNumbersChange,
-            onWidgetOptions = {
-                context.startActivity(Intent(context, HabitWidgetConfigActivity::class.java))
-            },
             onReset = {
                 showOptionsDialog = false
                 showResetDialog = true
@@ -469,7 +465,6 @@ private fun OptionsDialog(
     onThemeChoiceChange: (AppThemeChoice) -> Unit,
     showBeadNumbers: Boolean,
     onShowBeadNumbersChange: (Boolean) -> Unit,
-    onWidgetOptions: () -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -499,7 +494,6 @@ private fun OptionsDialog(
                     }
                     Switch(checked = showBeadNumbers, onCheckedChange = onShowBeadNumbersChange)
                 }
-                OutlinedButton(onClick = onWidgetOptions) { Text("Widget options") }
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Build", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     Text("v0.1.0 portrait debug", style = MaterialTheme.typography.bodySmall)
