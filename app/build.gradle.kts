@@ -7,6 +7,7 @@ plugins {
 
 val ciBuildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1000
 val portraitVersionCode = 1000 + ciBuildNumber
+val releaseKeystorePath = System.getenv("HABIT_BEADS_RELEASE_STORE_FILE")
 
 android {
     namespace = "com.habitbeads.app"
@@ -26,6 +27,28 @@ android {
             storePassword = "habitbeads"
             keyAlias = "habitbeads-portrait-debug"
             keyPassword = "habitbeads"
+        }
+        if (!releaseKeystorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("HABIT_BEADS_RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("HABIT_BEADS_RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("HABIT_BEADS_RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            if (!releaseKeystorePath.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 

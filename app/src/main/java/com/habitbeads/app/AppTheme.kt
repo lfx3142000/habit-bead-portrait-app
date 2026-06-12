@@ -147,6 +147,7 @@ fun HabitBeadsApp() {
         )
     }
     var showBeadNumbers by remember { mutableStateOf(loadShowBeadNumbers(context)) }
+    val premiumUnlocked by remember { mutableStateOf(loadPremiumUnlocked(context)) }
 
     val scheme = when (themeChoice) {
         AppThemeChoice.Warm -> WarmColorScheme
@@ -168,7 +169,8 @@ fun HabitBeadsApp() {
                 onShowBeadNumbersChange = { showNumbers ->
                     showBeadNumbers = showNumbers
                     saveShowBeadNumbers(context, showNumbers)
-                }
+                },
+                premiumUnlocked = premiumUnlocked
             )
         }
     }

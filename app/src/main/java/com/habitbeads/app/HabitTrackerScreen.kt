@@ -56,13 +56,15 @@ import kotlinx.coroutines.launch
 private val AddButtonBlue = Color(0xFF3F6DDB)
 private val MinLandscapeCellSize = 54.dp
 private val LandscapeHabitColumnWidth = 220.dp
+private const val FreeHabitLimit = 5
 
 @Composable
 fun HabitTrackerScreen(
     themeChoice: AppThemeChoice,
     onThemeChoiceChange: (AppThemeChoice) -> Unit,
     showBeadNumbers: Boolean,
-    onShowBeadNumbersChange: (Boolean) -> Unit
+    onShowBeadNumbersChange: (Boolean) -> Unit,
+    premiumUnlocked: Boolean
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -74,6 +76,7 @@ fun HabitTrackerScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showOptionsDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showPremiumDialog by remember { mutableStateOf(false) }
     var habitToEdit by remember { mutableStateOf<Habit?>(null) }
     var habitToDelete by remember { mutableStateOf<Habit?>(null) }
     val habits = remember { mutableStateListOf<Habit>() }
@@ -150,7 +153,13 @@ fun HabitTrackerScreen(
         ) {
             TrackerTopBar(
                 onOptions = { showOptionsDialog = true },
-                onAddHabit = { showAddDialog = true }
+                onAddHabit = {
+                    if (!premiumUnlocked && habits.size >= FreeHabitLimit) {
+                        showPremiumDialog = true
+                    } else {
+                        showAddDialog = true
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(if (isLandscape) 12.dp else 18.dp))
@@ -271,6 +280,8 @@ fun HabitTrackerScreen(
             onThemeChoiceChange = onThemeChoiceChange,
             showBeadNumbers = showBeadNumbers,
             onShowBeadNumbersChange = onShowBeadNumbersChange,
+            premiumUnlocked = premiumUnlocked,
+            onPremiumRequested = { showPremiumDialog = true },
             onReset = {
                 showOptionsDialog = false
                 showResetDialog = true
@@ -287,6 +298,10 @@ fun HabitTrackerScreen(
             confirmButton = { TextButton(onClick = { resetAllData(); showResetDialog = false }) { Text("Reset") } },
             dismissButton = { OutlinedButton(onClick = { showResetDialog = false }) { Text("Cancel") } }
         )
+    }
+
+    if (showPremiumDialog) {
+        PremiumDialog(onDismiss = { showPremiumDialog = false })
     }
 }
 
@@ -465,6 +480,8 @@ private fun OptionsDialog(
     onThemeChoiceChange: (AppThemeChoice) -> Unit,
     showBeadNumbers: Boolean,
     onShowBeadNumbersChange: (Boolean) -> Unit,
+    premiumUnlocked: Boolean,
+    onPremiumRequested: () -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -494,6 +511,25 @@ private fun OptionsDialog(
                     }
                     Switch(checked = showBeadNumbers, onCheckedChange = onShowBeadNumbersChange)
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Premium", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (premiumUnlocked) "Unlimited habits and custom colors unlocked" else "Free plan includes up to $FreeHabitLimit habits",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (!premiumUnlocked) {
+                        OutlinedButton(onClick = onPremiumRequested) { Text("Unlock") }
+                    }
+                }
+                OutlinedButton(onClick = onPremiumRequested, enabled = !premiumUnlocked) {
+                    Text(if (premiumUnlocked) "Custom colors unlocked" else "Custom colors require premium")
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Build", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     Text("v0.1.0 portrait debug", style = MaterialTheme.typography.bodySmall)
@@ -501,6 +537,25 @@ private fun OptionsDialog(
                     Text("Long press a habit row and drag to reorder.", style = MaterialTheme.typography.bodySmall)
                 }
                 OutlinedButton(onClick = onReset) { Text("Reset sample data") }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } }
+    )
+}
+
+@Composable
+private fun PremiumDialog(
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Unlock Habit Beads") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Free includes up to $FreeHabitLimit habits.")
+                Text("One-time premium unlock adds unlimited habits plus custom bead and background colors.")
+                Text("No subscription. No ads. No cloud backup.")
+                Text("Google Play Billing still needs the one-time product configured before this button can charge users.")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } }

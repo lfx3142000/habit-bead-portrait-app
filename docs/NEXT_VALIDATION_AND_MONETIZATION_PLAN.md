@@ -20,22 +20,23 @@ Widgets are paused from the user-facing app surface. The widget implementation f
    - Simple monetization, no in-app purchase plumbing.
    - Harder to grow because users cannot try the habit loop first.
 
-Recommended first monetization path: free core app plus one-time premium unlock. Avoid ads; they clash with the calm, personal utility feel.
+Chosen monetization path: free core app plus one-time premium unlock. Avoid ads; they clash with the calm, personal utility feel. Avoid subscriptions and cloud backup; the app's privacy position is local-only habit tracking.
 
 ## Premium Feature Candidates
 
 1. Unlimited habits.
-2. Extra color palettes and custom habit colors.
-3. Export/import backup.
-4. Optional bead numbers and advanced count limits.
-5. Longer history ranges beyond two weeks.
-6. Reminders and routine presets.
-7. Redesigned widgets later, only after they look native and reliable.
+2. Custom bead colors.
+3. Custom background colors.
+4. Optional future extras that do not require an account or cloud sync.
+
+Free plan: up to 5 habits.
+
+Premium plan: one-time Google Play in-app product unlocks unlimited habits and custom color pickers for bead and background elements.
 
 ## Security And Privacy Checks
 
 1. Confirm all habit data stays local unless a future backup/sync feature is explicitly added.
-2. Disable Android backup or define backup rules if local habit data should not silently move through device cloud backup.
+2. Keep Android backup disabled so local habit data does not silently move through device cloud backup.
 3. Review exported Android components before release. Only `MainActivity` should be exported unless a specific integration requires otherwise.
 4. Keep widget providers unregistered until redesigned.
 5. Check Room database migrations before any schema change.
@@ -66,11 +67,13 @@ Recommended first monetization path: free core app plus one-time premium unlock.
 10. Confirm no widgets appear in the Android widget picker.
 11. Confirm app remains usable after force stop and relaunch.
 12. Confirm no sensitive data appears in logs during normal use.
+13. Confirm free users cannot create more than 5 habits.
+14. Confirm premium-gated custom color affordances point to the one-time unlock.
 
 ## Suggested Next Update
 
-1. Add an in-app privacy/about screen.
-2. Add debug-only validation tooling: sample data generator and large-dataset stress mode.
-3. Add release QA notes to the GitHub workflow artifact summary.
-4. Decide monetization scope for version 1: one-time premium unlock is the current recommended path.
+1. Wire Google Play Billing Library to a one-time product named `premium_unlock`.
+2. Add an in-app privacy/about screen.
+3. Add debug-only validation tooling: sample data generator and large-dataset stress mode.
+4. Add release QA notes to the GitHub workflow artifact summary.
 5. Keep widgets hidden until a full visual redesign can be tested on real launchers.

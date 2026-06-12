@@ -20,6 +20,7 @@ on:
         type: choice
         options:
           - debug
+          - release_bundle
 
 jobs:
   build:
@@ -44,10 +45,34 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Build debug APK
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_variant == 'debug' }}
         run: gradle :app:assembleDebug --no-daemon
 
+      - name: Run Android lint
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_variant == 'debug' }}
+        run: gradle :app:lintDebug --no-daemon
+
       - name: Upload debug APK
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_variant == 'debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: habit-beads-${{ inputs.build_variant || 'debug' }}-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Build release App Bundle
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_variant == 'release_bundle' }}
+        env:
+          HABIT_BEADS_RELEASE_KEYSTORE_BASE64: ${{ secrets.HABIT_BEADS_RELEASE_KEYSTORE_BASE64 }}
+          HABIT_BEADS_RELEASE_STORE_PASSWORD: ${{ secrets.HABIT_BEADS_RELEASE_STORE_PASSWORD }}
+          HABIT_BEADS_RELEASE_KEY_ALIAS: ${{ secrets.HABIT_BEADS_RELEASE_KEY_ALIAS }}
+          HABIT_BEADS_RELEASE_KEY_PASSWORD: ${{ secrets.HABIT_BEADS_RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "$HABIT_BEADS_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/habitbeads-release.keystore"
+          HABIT_BEADS_RELEASE_STORE_FILE="$RUNNER_TEMP/habitbeads-release.keystore" gradle :app:bundleRelease --no-daemon
+
+      - name: Upload release App Bundle
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_variant == 'release_bundle' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: habit-beads-release-aab
+          path: app/build/outputs/bundle/release/*.aab
