@@ -35,6 +35,7 @@ import java.util.Calendar
 import java.util.Locale
 
 private const val WidgetActionAdd = "com.habitbeads.portrait.widget.ADD"
+private const val WidgetActionSubtract = "com.habitbeads.portrait.widget.SUBTRACT"
 private const val WidgetExtraHabitId = "habit_id"
 
 class TodayHabitWidgetProvider : AppWidgetProvider() {
@@ -69,7 +70,7 @@ class WeeklyStripWidgetProvider : AppWidgetProvider() {
 
 class HabitWidgetActionReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != WidgetActionAdd) return
+        if (intent.action != WidgetActionAdd && intent.action != WidgetActionSubtract) return
         val result = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             val habitId = intent.getIntExtra(WidgetExtraHabitId, -1)
@@ -77,7 +78,12 @@ class HabitWidgetActionReceiver : android.content.BroadcastReceiver() {
                 val repository = repository(context)
                 val todayKey = todayKey()
                 val count = repository.loadCounts()["$habitId:$todayKey"] ?: 0
-                repository.saveCount(habitId, todayKey, (count + 1).coerceAtMost(9))
+                val nextCount = if (intent.action == WidgetActionSubtract) {
+                    (count - 1).coerceAtLeast(0)
+                } else {
+                    (count + 1).coerceAtMost(9)
+                }
+                repository.saveCount(habitId, todayKey, nextCount)
             }
             HabitWidgetUpdater.updateAll(context)
             result.finish()
@@ -133,6 +139,19 @@ object HabitWidgetUpdater {
                 manager.updateAppWidget(id, buildWeeklyStripWidget(context, data, id))
             }
         }
+    }
+
+    suspend fun updateConfiguredWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        val data = loadWidgetData(context)
+        val providerClassName = manager.getAppWidgetInfo(widgetId)?.provider?.className.orEmpty()
+        val views = when {
+            providerClassName.endsWith(TodayHabitWidgetProvider::class.java.simpleName) -> buildTodayWidget(context, data, widgetId)
+            providerClassName.endsWith(SingleHabitWidgetProvider::class.java.simpleName) -> buildSingleHabitWidget(context, data, widgetId)
+            providerClassName.endsWith(WeeklyStripWidgetProvider::class.java.simpleName) -> buildWeeklyStripWidget(context, data, widgetId)
+            else -> buildTodayWidget(context, data, widgetId)
+        }
+        manager.updateAppWidget(widgetId, views)
     }
 }
 
@@ -207,13 +226,22 @@ class HabitWidgetConfigActivity : Activity() {
         val save = Button(this).apply {
             text = if (isDefaultSettings) "Save defaults" else "Save widget"
             setOnClickListener {
+                isEnabled = false
                 WidgetConfigStore.save(this@HabitWidgetConfigActivity, widgetId, opacityPercent, selectedHabitId)
-                HabitWidgetUpdater.updateAll(this@HabitWidgetConfigActivity)
-                if (!isDefaultSettings) {
-                    val result = Intent().putExtra(EXTRA_APPWIDGET_ID, widgetId)
-                    setResult(RESULT_OK, result)
+                CoroutineScope(Dispatchers.IO).launch {
+                    val manager = AppWidgetManager.getInstance(this@HabitWidgetConfigActivity)
+                    if (!isDefaultSettings) {
+                        HabitWidgetUpdater.updateConfiguredWidget(this@HabitWidgetConfigActivity, manager, widgetId)
+                    }
+                    HabitWidgetUpdater.updateAll(this@HabitWidgetConfigActivity)
+                    runOnUiThread {
+                        if (!isDefaultSettings) {
+                            val result = Intent().putExtra(EXTRA_APPWIDGET_ID, widgetId)
+                            setResult(RESULT_OK, result)
+                        }
+                        finish()
+                    }
                 }
-                finish()
             }
         }
 
@@ -319,14 +347,18 @@ private fun buildSingleHabitWidget(context: Context, data: WidgetData, widgetId:
             setTextViewText(R.id.widget_single_title, "Habit Beads")
             setTextViewText(R.id.widget_single_subtitle, "Open app to add habits")
             setImageViewBitmap(R.id.widget_single_bead, beadBitmap(data.palette.accent, 0, sizePx = 88))
+            setViewVisibility(R.id.widget_single_decrement, View.INVISIBLE)
             setOnClickPendingIntent(R.id.widget_single_root, openAppIntent(context))
         } else {
             val count = data.counts["${habit.id}:${todayKey()}"] ?: 0
             setTextViewText(R.id.widget_single_title, habit.name)
             setTextViewText(R.id.widget_single_subtitle, count.takeIf { it > 0 }?.let { "$it beads today" } ?: "Tap bead to add")
             setImageViewBitmap(R.id.widget_single_bead, beadBitmap(habit.color.toArgb(), count, sizePx = 88))
+            setTextColor(R.id.widget_single_decrement, data.palette.text)
+            setViewVisibility(R.id.widget_single_decrement, if (count > 0) View.VISIBLE else View.INVISIBLE)
             setOnClickPendingIntent(R.id.widget_single_root, openAppIntent(context))
             setOnClickPendingIntent(R.id.widget_single_bead, addBeadIntent(context, habit.id))
+            setOnClickPendingIntent(R.id.widget_single_decrement, subtractBeadIntent(context, habit.id))
         }
     }
 }
@@ -432,6 +464,21 @@ private fun addBeadIntent(context: Context, habitId: Int): PendingIntent {
     return PendingIntent.getBroadcast(
         context,
         200 + habitId,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+}
+
+private fun subtractBeadIntent(context: Context, habitId: Int): PendingIntent {
+    val intent = Intent(context, HabitWidgetActionReceiver::class.java).apply {
+        action = WidgetActionSubtract
+        setPackage(context.packageName)
+        data = Uri.parse("habitbeads://widget/subtract/$habitId")
+        putExtra(WidgetExtraHabitId, habitId)
+    }
+    return PendingIntent.getBroadcast(
+        context,
+        habitId + 20_000,
         intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
