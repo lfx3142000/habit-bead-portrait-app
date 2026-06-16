@@ -52,6 +52,13 @@ Habit Beads is now a working Android/Compose prototype on the `ci-validate-build
 * [x] Consider migration from old SharedPreferences test builds into Room
 * [x] Polish widget configuration after phone testing
 * [x] Decide monetization scope: free-only, one-time Pro, or optional supporter tier
+* [x] Confirm AndroidManifest.xml has no unnecessary exported components
+* [x] Confirm android:allowBackup="false" is set
+* [x] Confirm android:usesCleartextTraffic="false" is set
+* [x] Confirm no runtime permissions added without documented reason
+* [x] Confirm ProGuard/R8 release build configured with minification and resource shrinking
+* [x] Confirm no habit data logged to logcat (zero Log.d calls in Kotlin source)
+* [x] Cap stress test scope at 20 habits maximum (users will not exceed this)
 
 ## Current implementation notes
 * Room now owns habit and bead count persistence through HabitRepository.
@@ -60,9 +67,17 @@ Habit Beads is now a working Android/Compose prototype on the `ci-validate-build
 * The app shell/theme, tracker screen, state cards, habit rows, bead cells, and editor dialog are split into smaller Compose files.
 * Zero-count entries are now removed from Room through HabitEntryDao.clearEntry().
 * Options now displays the debug build label, local storage note, and restart/persistence test reminder.
+* Security validation completed: manifest flags confirmed, ProGuard confirmed, no data logging confirmed.
+* Performance stress test scope set to a maximum of 20 habits by design.
 
 ## Next tasks
 * [ ] Choose next roadmap direction from `docs/PORTRAIT_ROADMAP_OPTIONS.md`
+* [ ] Design and update app icon (replace placeholder launcher icon with final branded artwork)
+* [ ] Create release keystore and configure GitHub secrets for signed AAB builds
+* [ ] Wire Google Play Billing for the `premium_unlock` one-time product
+* [ ] Run performance validation: rotate 20 times, stress test with 5 and 20 habits, profile scrolling
+* [ ] Complete Manual QA checklist from `docs/GOOGLE_PLAY_RELEASE_PREP.md`
+* [ ] Set up Google Play Console app listing, store screenshots, and Data Safety form
 
 ## Roadmap options to choose from
 See `docs/PORTRAIT_ROADMAP_OPTIONS.md` for candidate plans covering:
