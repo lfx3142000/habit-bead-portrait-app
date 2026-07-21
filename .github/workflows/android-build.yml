@@ -58,6 +58,7 @@ jobs:
         with:
           name: habit-beads-${{ inputs.build_variant || 'debug' }}-apk
           path: app/build/outputs/apk/debug/*.apk
+              retention-days: 1
 
       - name: Build release App Bundle
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_variant == 'release_bundle' }}
@@ -76,3 +77,4 @@ jobs:
         with:
           name: habit-beads-release-aab
           path: app/build/outputs/bundle/release/*.aab
+              retention-days: 1
